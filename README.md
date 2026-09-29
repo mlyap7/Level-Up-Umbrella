@@ -59,12 +59,12 @@ To add an assistant coach later, run the same command with their email. Coaches 
 ### 5. Invite clients
 In the app, go to **Settings**, set a sign-up code (e.g. `LEVELUP2026`), and send clients the sign-up link along with the code.
 
-### 6. Add your logo
-Upload your logo files to the `public/brand/` folder of this repo on GitHub (**Add file → Upload files**). Vercel redeploys automatically.
+### 6. Your logo
+Already set up. The files live in `public/brand/`:
 - `logo.png`: the full logo, shown on the sign-in and sign-up pages.
-- `logo-mark.png` (optional): just the bolt-and-arrow icon, square, shown in the header next to the "LEVEL UP" wordmark.
+- `logo-mark.png`: just the bolt-and-arrow, shown in the header next to the "LEVEL UP" wordmark.
 
-Until then the app uses a built-in orange and black version of the mark. The phone home-screen icons are in `public/icons/`. Replace them with your own at the same sizes if you like.
+The phone home-screen icons and browser tab icon (`public/icons/`) are made from the same mark. To change the logo later, upload new files with exactly the same names to the same folders.
 
 ### Emails: one thing to set up before you have many clients
 Supabase's built-in email sender is only meant for testing and allows just a few emails per hour. Before inviting lots of clients, connect a proper sender under **Authentication → Emails → SMTP Settings**. [Resend](https://resend.com) has a free tier that works well. You can also edit the email wording and branding in the same section.

@@ -285,3 +285,8 @@ table.data tr:last-child td { border-bottom: 0; }
 /* Coach program builder: exercise name and notes on their own row, numbers in a row below. */
 .add-exercise { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .add-exercise > :first-child, .add-exercise > :nth-child(5), .add-exercise > button { grid-column: 1 / -1; }
+
+/* The logo is black and orange on transparent: give it a white tile so the
+   black arrow and text stay visible in dark mode. */
+.brand-mark { background: #FFFFFF; border-radius: 8px; padding: 2px; }
+.auth-logo img { background: #FFFFFF; border-radius: 12px; padding: 12px; }
