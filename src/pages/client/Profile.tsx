@@ -5,6 +5,7 @@ import type { GoalType, LengthUnit, WeightUnit } from '../../lib/types'
 import { cmTo, parseNumber, round, toCm } from '../../lib/units'
 import { useAsync } from '../../lib/useAsync'
 import { Card, ErrorMsg, Loading, UnitInput } from '../../components/ui'
+import { InstallSection } from '../../components/InstallCard'
 
 export function ProfilePage() {
   const profile = useProfile()
@@ -92,6 +93,7 @@ export function ProfilePage() {
           <button className="btn" disabled={busy}>Save profile</button>
         </form>
       </Card>
+      <InstallSection />
       {profile.role === 'client' && <MeasurementTypesCard clientId={profile.id} />}
     </div>
   )

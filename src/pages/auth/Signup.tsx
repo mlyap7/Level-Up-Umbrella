@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { checkSignupCode } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { AuthLogo } from '../../components/Brand'
+import { InAppBrowserNotice } from '../../components/InstallCard'
 import { ErrorMsg } from '../../components/ui'
 
 export function Signup() {
@@ -63,6 +64,7 @@ export function Signup() {
     <div className="auth-wrap">
       <div className="card auth-card">
         <AuthLogo />
+        <InAppBrowserNotice />
         <h1>Create your account</h1>
         <p className="muted">Track your weigh-ins, measurements, training and check-ins in one place.</p>
         <form className="stack" onSubmit={submit}>
