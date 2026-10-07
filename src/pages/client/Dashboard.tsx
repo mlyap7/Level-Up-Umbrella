@@ -4,6 +4,7 @@ import { ProgressPanel } from '../../components/ProgressPanel'
 import { DailyLogCard } from '../../components/DailyLogCard'
 import { MeasurementsCard } from '../../components/MeasurementsCard'
 import { ErrorMsg, Loading } from '../../components/ui'
+import { InstallCard } from '../../components/InstallCard'
 
 export function Dashboard() {
   const profile = useProfile()
@@ -16,6 +17,7 @@ export function Dashboard() {
   return (
     <div className="stack">
       <h1>{firstName ? `Hey ${firstName}` : 'Your progress'}</h1>
+      <InstallCard />
       <div className="dashboard-grid">
         <div className="dashboard-forms stack">
           <DailyLogCard clientId={profile.id} logs={data.logs} weightUnit={profile.weight_unit} onSaved={reload} />

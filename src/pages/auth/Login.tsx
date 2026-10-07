@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { AuthLogo } from '../../components/Brand'
+import { InAppBrowserNotice } from '../../components/InstallCard'
 import { ErrorMsg } from '../../components/ui'
 
 export function Login() {
@@ -31,6 +32,7 @@ export function Login() {
     <div className="auth-wrap">
       <div className="card auth-card">
         <AuthLogo />
+        <InAppBrowserNotice />
         <h1>Welcome back</h1>
         <p className="muted">Sign in to log your progress.</p>
         <form className="stack" onSubmit={submit}>

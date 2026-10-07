@@ -7,6 +7,7 @@ import { useProfile } from '../../lib/auth'
 import { useAsync } from '../../lib/useAsync'
 import { formatChange, kgTo } from '../../lib/units'
 import { Card, ErrorMsg, Loading } from '../../components/ui'
+import { InstallCard } from '../../components/InstallCard'
 
 export function CoachHome() {
   const coach = useProfile()
@@ -51,6 +52,7 @@ export function CoachHome() {
   return (
     <div className="stack">
       <h1>Clients</h1>
+      <InstallCard />
       <div className="stats card" style={{ marginBottom: 0 }}>
         <div><div className="stat-label">Active clients</div><div className="stat-value">{active.length}</div></div>
         <div><div className="stat-label">Need attention</div><div className="stat-value">{needAttention}</div></div>
