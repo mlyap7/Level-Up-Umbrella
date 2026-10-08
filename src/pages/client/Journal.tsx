@@ -6,12 +6,14 @@ import { useAsync } from '../../lib/useAsync'
 import { JournalList } from '../../components/JournalList'
 import { Card, ErrorMsg, Loading, MOODS, RatingScale } from '../../components/ui'
 
-const PROMPTS = [
-  'What went well today?',
-  'What felt hard, and why?',
-  'How are hunger, cravings and energy?',
-  'Anything you want your coach to know?',
-]
+// Morning journalers write about yesterday; evening ones about today.
+function prompts(hour = new Date().getHours()) {
+  const day = hour < 12 ? 'yesterday' : 'today'
+  return {
+    question: hour < 12 ? 'How did yesterday go?' : 'How did today go?',
+    hints: [`What went well ${day}?`, 'What felt hard, and why?', 'How were hunger, cravings and energy?', 'Anything you want your coach to know?'],
+  }
+}
 
 export function Journal() {
   const profile = useProfile()
@@ -51,8 +53,8 @@ export function Journal() {
             <span className="small" style={{ fontWeight: 500, color: 'var(--text-2)' }}>Mood</span>
             <RatingScale label="Mood" value={mood} onChange={setMood} max={5} low={MOODS[0]} high={MOODS[4]} />
           </div>
-          <label className="field">How are you feeling?
-            <span className="hint">Try: {PROMPTS.join(' · ')}</span>
+          <label className="field">{prompts().question}
+            <span className="hint">Try: {prompts().hints.join(' · ')}</span>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} maxLength={10000} rows={5} />
           </label>
           <ErrorMsg error={formError} />

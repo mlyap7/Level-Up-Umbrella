@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { listMeasurementTypes, renameMeasurementType, setMeasurementTypeArchived, updateProfile } from '../../lib/api'
 import { useAuth, useProfile } from '../../lib/auth'
 import type { GoalType, LengthUnit, WeightUnit } from '../../lib/types'
-import { cmTo, parseNumber, round, toCm } from '../../lib/units'
+import { cmTo, kgTo, parseNumber, round, toCm, toKg } from '../../lib/units'
+import { todayISO } from '../../lib/dates'
 import { useAsync } from '../../lib/useAsync'
 import { Card, ErrorMsg, Loading, UnitInput } from '../../components/ui'
 import { InstallSection } from '../../components/InstallCard'
@@ -16,6 +17,9 @@ export function ProfilePage() {
   const [goalType, setGoalType] = useState<GoalType>(profile.goal_type)
   const [goalNote, setGoalNote] = useState(profile.goal_note)
   const [height, setHeight] = useState(profile.height_cm != null ? String(round(cmTo(profile.height_cm, profile.length_unit))) : '')
+  const [goalWeight, setGoalWeight] = useState(profile.goal_weight_kg != null ? String(round(kgTo(Number(profile.goal_weight_kg), profile.weight_unit))) : '')
+  const [startedOn, setStartedOn] = useState(profile.coaching_started_on ?? '')
+  const hasSetupFields = profile.onboarded_at !== undefined // false until the welcome-flow database update runs
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -33,11 +37,17 @@ export function ProfilePage() {
     const h = parseNumber(height)
     const hCm = h == null ? null : toCm(h, lengthUnit)
     if (hCm != null && (hCm < 90 || hCm > 250)) return setError(`Check your height (${lengthUnit}).`)
+    const gw = parseNumber(goalWeight)
+    const gwKg = gw == null ? null : toKg(gw, weightUnit)
+    if (gwKg != null && (gwKg < 30 || gwKg > 300)) return setError(`Check your target weight (${weightUnit}).`)
     setBusy(true)
     try {
       await updateProfile(profile.id, {
         full_name: name.trim(), weight_unit: weightUnit, length_unit: lengthUnit,
         goal_type: goalType, goal_note: goalNote.trim(), height_cm: hCm == null ? null : round(hCm, 1),
+        ...(hasSetupFields && profile.role === 'client'
+          ? { goal_weight_kg: gwKg == null ? null : round(gwKg, 1), coaching_started_on: startedOn || null }
+          : {}),
       })
       await refreshProfile()
       setSaved(true)
@@ -71,7 +81,7 @@ export function ProfilePage() {
               </select>
             </label>
           </div>
-          <label className="field">Height <span className="hint">Optional</span>
+          <label className="field">Height
             <UnitInput unit={lengthUnit} value={height} onChange={(e) => setHeight(e.target.value)} />
           </label>
           {profile.role === 'client' && (
@@ -86,6 +96,16 @@ export function ProfilePage() {
               <label className="field">In your own words <span className="hint">What would make this coaching a success for you?</span>
                 <textarea value={goalNote} onChange={(e) => setGoalNote(e.target.value)} rows={3} maxLength={1000} />
               </label>
+              {hasSetupFields && (
+                <div className="form-row">
+                  <label className="field">Rough target weight <span className="hint">For your coach, not shown on your charts</span>
+                    <UnitInput unit={weightUnit} value={goalWeight} onChange={(e) => setGoalWeight(e.target.value)} />
+                  </label>
+                  <label className="field">Started with Level Up
+                    <input type="date" value={startedOn} max={todayISO()} onChange={(e) => setStartedOn(e.target.value)} />
+                  </label>
+                </div>
+              )}
             </>
           )}
           <ErrorMsg error={error} />

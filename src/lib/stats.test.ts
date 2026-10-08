@@ -137,3 +137,16 @@ describe('formatChange', () => {
     expect(formatChange(0.5, '')).toBe('+0.5')
   })
 })
+
+import { isPhotoWeek, photosDue } from './photos'
+describe('photo weeks', () => {
+  it('alternates weeks from the start week', () => {
+    expect(isPhotoWeek('2026-09-02', '2026-09-03')).toBe(true)   // same week
+    expect(isPhotoWeek('2026-09-02', '2026-09-09')).toBe(false)  // next week
+    expect(isPhotoWeek('2026-09-02', '2026-09-16')).toBe(true)   // two weeks later
+  })
+  it('is not due if photos were uploaded recently', () => {
+    expect(photosDue('2026-09-02', '2026-09-16', [{ taken_on: '2026-09-14' }])).toBe(false)
+    expect(photosDue('2026-09-02', '2026-09-16', [{ taken_on: '2026-09-01' }])).toBe(true)
+  })
+})

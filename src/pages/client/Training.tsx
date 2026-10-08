@@ -28,7 +28,7 @@ export function Training() {
       </div>
 
       {draft && (
-        <section className="install-card" aria-label="Unfinished workout">
+        <section className="promo-card" aria-label="Unfinished workout">
           <div className="grow">
             <h2 style={{ marginBottom: 4 }}>Unfinished workout</h2>
             <p className="small" style={{ margin: '0 0 10px' }}>

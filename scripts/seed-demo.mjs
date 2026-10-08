@@ -26,6 +26,10 @@ const sarah = await account('sarah@demo.test', 'Sarah Tan')
 const jay = await account('jay@demo.test', 'Jay Lim')
 await sarah.c.from('profiles').update({ goal_type: 'lose', goal_note: 'Drop a dress size before my wedding in March and feel strong.', height_cm: 163 }).eq('id', sarah.id)
 await jay.c.from('profiles').update({ goal_type: 'lose' }).eq('id', jay.id)
+// Mark demo clients as having finished the welcome flow (ignored if that database update isn't applied).
+for (const [who, started, goal] of [[sarah, daysAgo(42), 64], [jay, daysAgo(30), 80]]) {
+  await who.c.from('profiles').update({ onboarded_at: new Date().toISOString(), coaching_started_on: started, goal_weight_kg: goal }).eq('id', who.id)
+}
 
 // Sarah: 6 weeks of mostly-daily weigh-ins trending down with realistic noise.
 const logs = []

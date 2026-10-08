@@ -95,7 +95,11 @@ npm test                                                   # unit tests (trend m
 API_URL=... ANON_KEY=... DB_URL=... node scripts/rls-check.mjs   # security rules against a local Supabase
 ```
 
-**Changing the database:** add a new file in `supabase/migrations/` (never edit one that has already been run on the live project), then run it in the Supabase SQL editor or with `npx supabase db push`.
+**Changing the database:** add a new file in `supabase/migrations/` (never edit one that has already been run on the live project), then run it in the Supabase SQL editor or with `npx supabase db push`. Run the SQL **before** merging the app change that needs it.
+
+Migrations so far, in order:
+1. `20260929000000_init.sql`: core tables and security rules
+2. `20261008000000_welcome_and_photos.sql`: welcome-flow profile fields and private progress-photo storage
 
 ### Project layout
 ```
@@ -109,7 +113,6 @@ src/styles.css         colours and layout (brand orange is --brand)
 ```
 
 ## Ideas for later
-- Progress photos (front, side, back) stored privately in Supabase Storage
 - Email or push reminders for missed weigh-ins and check-ins
 - Optional menstrual cycle tracking, to explain weight spikes
 - Nutrition targets (calories and protein) with a simple daily "hit / missed" log

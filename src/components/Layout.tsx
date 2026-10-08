@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Navigate, NavLink, Outlet } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../lib/auth'
 import { Brand } from './Brand'
@@ -22,6 +22,11 @@ const COACH_NAV: NavItem[] = [
 export function Layout() {
   const { profile, signOut } = useAuth()
   const nav = profile?.role === 'coach' ? COACH_NAV : CLIENT_NAV
+
+  // Clients who haven't done the welcome/setup flow go there first.
+  // (`=== null` rather than `== null`: undefined means the database update
+  // that adds this field hasn't been run yet, so don't send anyone there.)
+  if (profile?.role === 'client' && profile.onboarded_at === null) return <Navigate to="/welcome" replace />
   const cls = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '')
 
   return (

@@ -2,7 +2,7 @@
 import { supabase, unwrap } from './supabase'
 import type {
   CheckIn, CheckInComment, DailyLog, JournalEntry, Measurement, MeasurementType,
-  Profile, Program, ProgramWorkout, SessionSet, WorkoutExercise, WorkoutSession,
+  Pose, Profile, Program, ProgramWorkout, ProgressPhoto, SessionSet, WorkoutExercise, WorkoutSession,
 } from './types'
 
 // Supabase returns numeric columns as strings; normalise them.
@@ -11,7 +11,8 @@ const num = (v: unknown): number | null => (v == null ? null : Number(v))
 // ---------------------------------------------------------------- profiles
 
 export async function updateProfile(id: string, patch: Partial<Pick<Profile,
-  'full_name' | 'weight_unit' | 'length_unit' | 'goal_type' | 'goal_note' | 'height_cm'>>) {
+  'full_name' | 'weight_unit' | 'length_unit' | 'goal_type' | 'goal_note' | 'height_cm'
+  | 'onboarded_at' | 'goal_weight_kg' | 'coaching_started_on'>>) {
   unwrap(await supabase.from('profiles').update(patch).eq('id', id))
 }
 
@@ -261,4 +262,44 @@ export async function createSession(clientId: string, s: NewSession) {
 
 export async function deleteSession(id: string) {
   unwrap(await supabase.from('workout_sessions').delete().eq('id', id))
+}
+
+// ---------------------------------------------------------------- progress photos
+
+const PHOTO_BUCKET = 'progress-photos'
+
+export async function listPhotos(clientId: string): Promise<ProgressPhoto[]> {
+  return unwrap(await supabase.from('progress_photos').select('*').eq('client_id', clientId)
+    .order('taken_on', { ascending: false })) as ProgressPhoto[]
+}
+
+/** Short-lived private links (1 hour) for showing photos. */
+export async function photoUrls(paths: string[]): Promise<Record<string, string>> {
+  if (paths.length === 0) return {}
+  const res = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, 3600)
+  if (res.error) throw new Error(res.error.message)
+  const out: Record<string, string> = {}
+  for (const r of res.data ?? []) if (r.path && r.signedUrl) out[r.path] = r.signedUrl
+  return out
+}
+
+/** Uploads (or replaces) the photo for one pose on one date. */
+export async function savePhoto(clientId: string, takenOn: string, pose: Pose, image: Blob, existing?: ProgressPhoto) {
+  const path = `${clientId}/${takenOn}-${pose}-${crypto.randomUUID()}.jpg`
+  const up = await supabase.storage.from(PHOTO_BUCKET).upload(path, image, { contentType: 'image/jpeg' })
+  if (up.error) throw new Error(up.error.message)
+  const row = await supabase.from('progress_photos').upsert(
+    { client_id: clientId, taken_on: takenOn, pose, storage_path: path },
+    { onConflict: 'client_id,taken_on,pose' },
+  )
+  if (row.error) {
+    await supabase.storage.from(PHOTO_BUCKET).remove([path])
+    throw new Error(row.error.message)
+  }
+  if (existing && existing.storage_path !== path) await supabase.storage.from(PHOTO_BUCKET).remove([existing.storage_path])
+}
+
+export async function deletePhoto(photo: ProgressPhoto) {
+  unwrap(await supabase.from('progress_photos').delete().eq('id', photo.id))
+  await supabase.storage.from(PHOTO_BUCKET).remove([photo.storage_path])
 }

@@ -14,6 +14,10 @@ export interface Profile {
   height_cm: number | null
   archived: boolean
   created_at: string
+  // Added by the welcome-flow migration. `undefined` means the migration hasn't run yet.
+  onboarded_at?: string | null
+  goal_weight_kg?: number | string | null
+  coaching_started_on?: string | null
 }
 
 export interface DailyLog {
@@ -120,4 +124,15 @@ export interface SessionSet {
   weight_kg: number | null
   reps: number | null
   rpe: number | null
+}
+
+export type Pose = 'front' | 'side' | 'back'
+
+export interface ProgressPhoto {
+  id: string
+  client_id: string
+  taken_on: string
+  pose: Pose
+  storage_path: string
+  created_at: string
 }
