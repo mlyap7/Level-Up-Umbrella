@@ -5,6 +5,7 @@ import { DailyLogCard } from '../../components/DailyLogCard'
 import { MeasurementsCard } from '../../components/MeasurementsCard'
 import { ErrorMsg, Loading } from '../../components/ui'
 import { InstallCard } from '../../components/InstallCard'
+import { PhotosPromo } from '../../components/PhotosPromo'
 
 export function Dashboard() {
   const profile = useProfile()
@@ -22,6 +23,7 @@ export function Dashboard() {
         <div className="dashboard-forms stack">
           <DailyLogCard clientId={profile.id} logs={data.logs} weightUnit={profile.weight_unit} onSaved={reload} />
           <MeasurementsCard clientId={profile.id} types={data.types} measurements={data.measurements} lengthUnit={profile.length_unit} onSaved={reload} />
+          <PhotosPromo profile={profile} />
         </div>
         <div className="dashboard-progress">
           <ProgressPanel data={data} weightUnit={profile.weight_unit} lengthUnit={profile.length_unit} editable onChanged={reload} />

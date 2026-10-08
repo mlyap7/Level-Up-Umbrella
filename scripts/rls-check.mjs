@@ -112,5 +112,38 @@ const archOk = await coach.c.rpc('set_client_archived', { target: bob.id, archiv
 const bobArchived = sql(`select archived from public.profiles where id = '${bob.id}'`)
 check('coach can archive a client', !archOk.error && bobArchived === 't')
 
+// Welcome-flow fields
+const setup = await alice.c.from('profiles').update({ goal_weight_kg: 65, coaching_started_on: '2026-03-01', onboarded_at: new Date().toISOString() }).eq('id', alice.id).select()
+check('client can fill in welcome-flow fields', !setup.error && setup.data?.length === 1)
+const bobGoal = await bob.c.from('profiles').update({ goal_weight_kg: 1 }).eq('id', alice.id).select()
+check('client cannot edit someone else\'s goal weight', (bobGoal.data ?? []).length === 0)
+
+// Progress photos: table + private storage
+const jpeg = new Blob([Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' })
+const alicePath = `${alice.id}/test-${stamp}.jpg`
+const up = await alice.c.storage.from('progress-photos').upload(alicePath, jpeg, { contentType: 'image/jpeg' })
+check('client can upload a photo to own folder', !up.error)
+const bobUp = await bob.c.storage.from('progress-photos').upload(`${alice.id}/sneaky-${stamp}.jpg`, jpeg, { contentType: 'image/jpeg' })
+check('client cannot upload into someone else\'s folder', !!bobUp.error)
+const row = await alice.c.from('progress_photos').insert({ client_id: alice.id, pose: 'front', storage_path: alicePath }).select('id').single()
+check('client can save a photo record', !row.error)
+const badRow = await bob.c.from('progress_photos').insert({ client_id: bob.id, pose: 'front', storage_path: alicePath })
+check('photo record cannot point at another client\'s file', !!badRow.error)
+const { data: bobPhotos } = await bob.c.from('progress_photos').select('id')
+check('client cannot see other clients\' photo records', bobPhotos.length === 0)
+const bobUrl = await bob.c.storage.from('progress-photos').createSignedUrl(alicePath, 60)
+check('client cannot get a link to another client\'s photo', !!bobUrl.error || !bobUrl.data?.signedUrl)
+const bobDl = await bob.c.storage.from('progress-photos').download(alicePath)
+check('client cannot download another client\'s photo', !!bobDl.error)
+const anonDl = await anon.storage.from('progress-photos').download(alicePath)
+check('logged-out visitors cannot download photos', !!anonDl.error)
+const coachUrl = await coach.c.storage.from('progress-photos').createSignedUrl(alicePath, 60)
+check('coach can view client photos', !coachUrl.error && !!coachUrl.data?.signedUrl)
+const coachDel = await coach.c.storage.from('progress-photos').remove([alicePath])
+const stillThere = await alice.c.storage.from('progress-photos').download(alicePath)
+check('coach cannot delete client photos', !stillThere.error && (coachDel.data ?? []).length === 0)
+const del = await alice.c.storage.from('progress-photos').remove([alicePath])
+check('client can delete own photo', !del.error && (del.data ?? []).length === 1)
+
 console.log(failures === 0 ? '\nAll security checks passed.' : `\n${failures} check(s) FAILED.`)
 process.exit(failures === 0 ? 0 : 1)

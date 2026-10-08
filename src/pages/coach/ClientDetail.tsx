@@ -6,18 +6,20 @@ import { useProfile } from '../../lib/auth'
 import { formatFullDate, toISODate } from '../../lib/dates'
 import { useAsync } from '../../lib/useAsync'
 import { useProgressData } from '../../lib/useProgressData'
-import { cmTo, round } from '../../lib/units'
+import { cmTo, kgTo, round } from '../../lib/units'
 import { CheckInCard } from '../../components/CheckInCard'
 import { JournalList } from '../../components/JournalList'
 import { ProgramEditor } from '../../components/ProgramEditor'
 import { ProgressPanel } from '../../components/ProgressPanel'
 import { SessionHistory } from '../../components/SessionHistory'
+import { PhotosView } from '../../components/PhotosView'
 import { Card, ErrorMsg, Loading } from '../../components/ui'
 import type { Profile } from '../../lib/types'
 
 const GOALS = { lose: 'Lose fat', gain: 'Build muscle / gain', maintain: 'Maintain / recomp' }
 
 export function ClientDetail() {
+  const coach = useProfile()
   const { clientId = '' } = useParams()
   const { data: client, error, loading, reload } = useAsync(() => getProfile(clientId), [clientId])
 
@@ -37,7 +39,11 @@ export function ClientDetail() {
             <div className="small muted">
               {GOALS[client.goal_type]}
               {client.height_cm != null && ` · ${round(cmTo(client.height_cm, client.length_unit))} ${client.length_unit}`}
-              {` · Joined ${formatFullDate(toISODate(new Date(client.created_at)))}`}
+              {client.goal_weight_kg != null && ` · Target ${round(kgTo(Number(client.goal_weight_kg), coach.weight_unit))} ${coach.weight_unit}`}
+              {client.coaching_started_on
+                ? ` · Coaching since ${formatFullDate(client.coaching_started_on)}`
+                : ` · Joined ${formatFullDate(toISODate(new Date(client.created_at)))}`}
+              {client.onboarded_at === null && ' · Setup not finished'}
               {client.archived && ' · Archived'}
             </div>
           </div>
@@ -54,12 +60,14 @@ export function ClientDetail() {
         <NavLink to={base} end className={cls}>Progress</NavLink>
         <NavLink to={`${base}/check-ins`} className={cls}>Check-ins</NavLink>
         <NavLink to={`${base}/training`} className={cls}>Training</NavLink>
+        <NavLink to={`${base}/photos`} className={cls}>Photos</NavLink>
         <NavLink to={`${base}/journal`} className={cls}>Journal</NavLink>
       </nav>
       <Routes>
         <Route index element={<ClientProgress client={client} />} />
         <Route path="check-ins" element={<ClientCheckIns client={client} />} />
         <Route path="training" element={<ClientTraining client={client} />} />
+        <Route path="photos" element={<PhotosView clientId={client.id} editable={false} startedOn={client.coaching_started_on ?? null} />} />
         <Route path="journal" element={<ClientJournal client={client} />} />
       </Routes>
     </div>

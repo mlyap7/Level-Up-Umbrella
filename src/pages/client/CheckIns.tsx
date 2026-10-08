@@ -5,6 +5,7 @@ import { addDays, formatWeekOf, todayISO, weekStart } from '../../lib/dates'
 import { useAsync } from '../../lib/useAsync'
 import { CheckInCard, RATING_FIELDS } from '../../components/CheckInCard'
 import { Card, ErrorMsg, Loading, RatingScale } from '../../components/ui'
+import { PhotosPromo } from '../../components/PhotosPromo'
 
 type Ratings = Record<(typeof RATING_FIELDS)[number]['key'], number | null>
 const EMPTY: Ratings = { adherence: null, energy: null, sleep_quality: null, hunger: null, stress: null, digestion: null }
@@ -67,6 +68,7 @@ export function CheckIns() {
   return (
     <div className="stack" style={{ maxWidth: 760 }}>
       <h1>Weekly check-in</h1>
+      <PhotosPromo profile={profile} compact />
       <Card title={existing ? 'Update your check-in' : 'How did this week go?'}>
         <form className="stack" onSubmit={submit}>
           <label className="field">Week
