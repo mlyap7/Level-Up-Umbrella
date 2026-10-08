@@ -58,8 +58,13 @@ export async function listAllDailyLogs(since: string): Promise<DailyLog[]> {
   return (rows as Record<string, unknown>[]).map(toDailyLog)
 }
 
-export async function upsertDailyLog(clientId: string, log: Pick<DailyLog, 'log_date' | 'weight_kg' | 'steps' | 'sleep_hours'>) {
+export async function upsertDailyLog(clientId: string, log: { log_date: string } & Partial<Pick<DailyLog, 'weight_kg' | 'steps' | 'sleep_hours'>>) {
   unwrap(await supabase.from('daily_logs').upsert({ client_id: clientId, ...log }, { onConflict: 'client_id,log_date' }))
+}
+
+/** Saves several days one at a time. Each row only updates the columns it includes. */
+export async function upsertDailyLogs(clientId: string, logs: ({ log_date: string } & Partial<Pick<DailyLog, 'weight_kg' | 'steps' | 'sleep_hours'>>)[]) {
+  for (const log of logs) await upsertDailyLog(clientId, log)
 }
 
 export async function deleteDailyLog(id: string) {

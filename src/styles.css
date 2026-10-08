@@ -258,7 +258,7 @@ table.data tr:last-child td { border-bottom: 0; }
 .ratings .flagged { color: var(--crit); font-weight: 600; }
 
 /* ---------- Training ---------- */
-.set-grid { display: grid; grid-template-columns: 36px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 36px; gap: 6px; align-items: center; }
+.set-grid { display: grid; grid-template-columns: 28px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 40px 28px; gap: 6px; align-items: center; }
 .set-grid .head { font-size: .75rem; color: var(--text-3); font-weight: 500; }
 .set-grid input { min-height: 40px; padding: 8px; text-align: center; }
 .exercise-block { padding: 14px 0; border-bottom: 1px solid var(--border); }
@@ -304,3 +304,11 @@ table.data tr:last-child td { border-bottom: 0; }
   width: 22px; height: 22px; vertical-align: -5px; margin: 0 2px; padding: 2px;
   color: var(--brand-strong); background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
 }
+
+/* Workout: ✓ marks a set done */
+.done-btn {
+  min-height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-3); font-size: 1rem; font-weight: 700; cursor: pointer;
+}
+.done-btn.on { background: var(--good); border-color: var(--good); color: #FFFFFF; }
+.set-grid input.set-done { background: color-mix(in srgb, var(--good) 10%, var(--surface)); border-color: color-mix(in srgb, var(--good) 40%, var(--border)); }
