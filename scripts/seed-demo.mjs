@@ -24,7 +24,7 @@ const coach = await account('coach@demo.test', 'Coach Demo')
 sql(`update public.profiles set role = 'coach' where id = '${coach.id}'`)
 const sarah = await account('sarah@demo.test', 'Sarah Tan')
 const jay = await account('jay@demo.test', 'Jay Lim')
-await sarah.c.from('profiles').update({ goal_type: 'lose', goal_note: 'Drop a dress size before my wedding in March and feel strong.', height_cm: 163 }).eq('id', sarah.id)
+await sarah.c.from('profiles').update({ goal_type: 'lose', goal_note: 'I want to feel confident on my wedding day and keep the habits after.', main_goal: 'Drop a dress size before my wedding in March and feel strong', has_smart_scale: true, height_cm: 163 }).eq('id', sarah.id)
 await jay.c.from('profiles').update({ goal_type: 'lose' }).eq('id', jay.id)
 // Mark demo clients as having finished the welcome flow (ignored if that database update isn't applied).
 for (const [who, started, goal] of [[sarah, daysAgo(42), 64], [jay, daysAgo(30), 80]]) {
@@ -37,7 +37,13 @@ for (let i = 42; i >= 0; i--) {
   if (i % 7 === 3 && i > 5) continue // misses a day now and then
   const trend = 72.4 - (42 - i) * 0.055
   const noise = Math.sin(i * 1.7) * 0.45 + (i % 7 === 1 ? 0.5 : 0) // weekend bump
-  logs.push({ client_id: sarah.id, log_date: daysAgo(i), weight_kg: +(trend + noise).toFixed(1), steps: 7000 + ((i * 1337) % 5000), sleep_hours: 6 + (i % 3) * 0.5 })
+  logs.push({
+    client_id: sarah.id, log_date: daysAgo(i), weight_kg: +(trend + noise).toFixed(1), steps: 7000 + ((i * 1337) % 5000), sleep_hours: 6 + (i % 3) * 0.5,
+    water_l: +(1.8 + (i % 4) * 0.3).toFixed(1),
+    body_fat_pct: +(33.5 - (42 - i) * 0.05 + Math.sin(i * 2.3) * 0.8).toFixed(1),
+    muscle_mass_kg: +(44.2 + (42 - i) * 0.01 + Math.cos(i) * 0.3).toFixed(1),
+    visceral_fat: i > 21 ? 8 : 7,
+  })
 }
 await sarah.c.from('daily_logs').upsert(logs, { onConflict: 'client_id,log_date' })
 

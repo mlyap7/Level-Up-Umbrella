@@ -46,7 +46,11 @@ export function Welcome() {
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(profile.weight_unit)
   const [lengthUnit, setLengthUnit] = useState<LengthUnit>(profile.length_unit)
   const [goalType, setGoalType] = useState<GoalType>(profile.goal_type)
+  const [mainGoal, setMainGoal] = useState(profile.main_goal ?? '')
   const [why, setWhy] = useState(profile.goal_note)
+  // Fields from the questionnaire database update; skipped if it hasn't run yet.
+  const hasNewFields = profile.has_smart_scale !== undefined
+  const [smartScale, setSmartScale] = useState<boolean | null>(hasNewFields && profile.onboarded_at ? Boolean(profile.has_smart_scale) : null)
   const [goalWeight, setGoalWeight] = useState(
     profile.goal_weight_kg != null ? String(round(kgTo(Number(profile.goal_weight_kg), profile.weight_unit))) : '',
   )
@@ -61,6 +65,7 @@ export function Welcome() {
   // Step 4: today
   const [todayWeight, setTodayWeight] = useState('')
   const [measures, setMeasures] = useState<Record<string, string>>({})
+  const [bodyStats, setBodyStats] = useState({ fat: '', muscle: '', visceral: '' })
 
   if (loading && !data) return <Loading />
 
@@ -83,10 +88,12 @@ export function Welcome() {
     const gw = parseNumber(goalWeight)
     const gwKg = gw == null ? null : toKg(gw, weightUnit)
     if (gwKg != null && (gwKg < 30 || gwKg > 300)) { setError(`Check your target weight (${weightUnit}).`); return false }
-    if (!why.trim()) { setError('Tell us in a few words why you started. It helps your coach a lot.'); return false }
+    if (hasNewFields && !mainGoal.trim()) { setError('Tell us your main health goal.'); return false }
+    if (!why.trim()) { setError('Tell us in a few words why this goal matters to you. It helps your coach a lot.'); return false }
     await updateProfile(profile.id, {
       weight_unit: weightUnit, length_unit: lengthUnit, goal_type: goalType,
       goal_note: why.trim(), goal_weight_kg: gwKg == null ? null : round(gwKg, 1),
+      ...(hasNewFields ? { main_goal: mainGoal.trim() } : {}),
     })
   })
 
@@ -94,7 +101,8 @@ export function Welcome() {
     const h = parseNumber(height)
     const hCm = h == null ? null : toCm(h, lengthUnit)
     if (hCm == null || hCm < 90 || hCm > 250) { setError(`Enter your height in ${lengthUnit}.`); return false }
-    await updateProfile(profile.id, { height_cm: round(hCm, 1) })
+    if (hasNewFields && smartScale == null) { setError('Let us know whether you have a smart scale.'); return false }
+    await updateProfile(profile.id, { height_cm: round(hCm, 1), ...(hasNewFields ? { has_smart_scale: Boolean(smartScale) } : {}) })
   })
 
   const saveStart = () => run(async () => {
@@ -109,19 +117,30 @@ export function Welcome() {
     await updateProfile(profile.id, { coaching_started_on: date })
   })
 
-  const saveToday = () => run(async () => {
+  const saveToday = (skipMeasurements = false) => run(async () => {
     const w = parseNumber(todayWeight)
     const kg = w == null ? null : toKg(w, weightUnit)
+    if (kg == null && !alreadyWeighed) { setError('Enter your weight today. Your best reading is fine.'); return false }
     if (kg != null && (kg < 25 || kg > 350)) { setError(`That weight looks off. Check it’s in ${weightUnit}.`); return false }
+    const bf = parseNumber(bodyStats.fat)
+    const mm = parseNumber(bodyStats.muscle)
+    const vf = parseNumber(bodyStats.visceral)
+    if (bf != null && (bf < 2 || bf > 75)) { setError('Body fat should be a percentage, e.g. 28.4.'); return false }
+    if (vf != null && (vf < 1 || vf > 60)) { setError('Visceral fat is the rating on your scale, usually 1 to 59.'); return false }
     const rows: { type_id: string; value_cm: number }[] = []
-    for (const t of data?.types ?? []) {
+    for (const t of skipMeasurements ? [] : data?.types ?? []) {
       const v = parseNumber(measures[t.id] ?? '')
       if (v == null) continue
       const cm = toCm(v, lengthUnit)
       if (cm <= 5 || cm > 300) { setError(`Check your ${t.name.toLowerCase()} (${lengthUnit}).`); return false }
       rows.push({ type_id: t.id, value_cm: round(cm, 2) })
     }
-    if (kg != null) await upsertDailyLog(profile.id, { log_date: today, weight_kg: round(kg, 2) })
+    const stats = smartScale && hasNewFields
+      ? { body_fat_pct: bf, muscle_mass_kg: mm == null ? null : round(toKg(mm, weightUnit), 2), visceral_fat: vf }
+      : {}
+    if (kg != null || Object.values(stats).some((v) => v != null)) {
+      await upsertDailyLog(profile.id, { log_date: today, ...(kg != null ? { weight_kg: round(kg, 2) } : {}), ...stats })
+    }
     await upsertMeasurements(profile.id, today, rows)
   })
 
@@ -170,9 +189,15 @@ export function Welcome() {
               </button>
             ))}
           </div>
-          <label className="field">Why did you start? <span className="hint">In your own words. What would make this a success for you?</span>
+          {hasNewFields && (
+            <label className="field">What is your main health goal?
+              <textarea value={mainGoal} onChange={(e) => setMainGoal(e.target.value)} rows={2} maxLength={1000}
+                placeholder="e.g. Lose 10 kg and get my blood sugar under control" />
+            </label>
+          )}
+          <label className="field">Why is this goal important to you?
             <textarea value={why} onChange={(e) => setWhy(e.target.value)} rows={3} maxLength={1000}
-              placeholder="e.g. Feel confident at the beach in December and keep up with my kids" />
+              placeholder="e.g. I want the energy to keep up with my kids and be a role model for them" />
           </label>
           <label className="field">Rough target weight <span className="hint">If you have one in mind. This is for your coach and won’t appear on your charts.</span>
             <UnitInput unit={weightUnit} value={goalWeight} onChange={(e) => setGoalWeight(e.target.value)} />
@@ -189,6 +214,19 @@ export function Welcome() {
           <label className="field">Height
             <UnitInput unit={lengthUnit} value={height} onChange={(e) => setHeight(e.target.value)} autoFocus />
           </label>
+          {hasNewFields && (
+            <>
+              <p className="small" style={{ margin: '4px 0 -4px', fontWeight: 500, color: 'var(--text-2)' }}>Do you have a smart scale that shows body fat %?</p>
+              <div className="choice-grid two" role="radiogroup" aria-label="Smart scale">
+                <button type="button" role="radio" aria-checked={smartScale === true} className={`choice ${smartScale === true ? 'on' : ''}`} onClick={() => setSmartScale(true)}>
+                  <strong>Yes</strong><span>e.g. Tanita, Xiaomi, Huawei</span>
+                </button>
+                <button type="button" role="radio" aria-checked={smartScale === false} className={`choice ${smartScale === false ? 'on' : ''}`} onClick={() => setSmartScale(false)}>
+                  <strong>No</strong><span>You can switch this on later in Profile</span>
+                </button>
+              </div>
+            </>
+          )}
           <ErrorMsg error={error} />
           <Next busy={busy} onClick={saveHeight}>Continue</Next>
         </>
@@ -234,7 +272,19 @@ export function Welcome() {
               <UnitInput unit={weightUnit} value={todayWeight} onChange={(e) => setTodayWeight(e.target.value)} />
             </label>
           )}
-          {!alreadyWeighed && <p className="small muted" style={{ marginTop: -8 }}>Already eaten today? Leave it empty and weigh in tomorrow morning.</p>}
+          {smartScale && hasNewFields && (
+            <div className="form-row three">
+              <label className="field">Body fat
+                <UnitInput unit="%" value={bodyStats.fat} onChange={(e) => setBodyStats((b) => ({ ...b, fat: e.target.value }))} />
+              </label>
+              <label className="field">Muscle mass
+                <UnitInput unit={weightUnit} value={bodyStats.muscle} onChange={(e) => setBodyStats((b) => ({ ...b, muscle: e.target.value }))} />
+              </label>
+              <label className="field">Visceral fat
+                <input inputMode="decimal" value={bodyStats.visceral} onChange={(e) => setBodyStats((b) => ({ ...b, visceral: e.target.value }))} />
+              </label>
+            </div>
+          )}
           <div className="form-row">
             {(data?.types ?? []).slice(0, 4).map((t) => (
               <label key={t.id} className="field">{t.name}
@@ -244,7 +294,9 @@ export function Welcome() {
           </div>
           <p className="small muted" style={{ marginTop: -8 }}>Tape snug around the narrowest part of your waist and the widest part of your hips.</p>
           <ErrorMsg error={error} />
-          <Next busy={busy} onClick={saveToday}>Continue</Next>
+          <Next busy={busy} onClick={() => saveToday()}>Continue</Next>
+          <button type="button" className="btn btn-ghost btn-block" disabled={busy} onClick={() => saveToday(true)}>Skip measurements for now</button>
+          <p className="small muted" style={{ marginTop: -8, textAlign: 'center' }}>No tape measure handy? Add them later from your Progress page.</p>
         </>
       )
       break

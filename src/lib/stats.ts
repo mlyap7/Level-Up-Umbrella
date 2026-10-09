@@ -41,7 +41,7 @@ export function trendAt(trend: TrendPoint[], date: string): number | null {
   return found
 }
 
-export interface WeightSummary {
+export interface TrendSummary {
   latest: number | null
   latestDate: string | null
   currentAvg: number | null
@@ -49,11 +49,9 @@ export interface WeightSummary {
   totalChange: number | null
 }
 
-export function weightSummary(logs: Pick<DailyLog, 'log_date' | 'weight_kg'>[]): WeightSummary {
-  const pts = logs
-    .filter((l) => l.weight_kg != null)
-    .map((l) => ({ date: l.log_date, value: Number(l.weight_kg) }))
-  const trend = rollingAverage(pts)
+/** Current 7-day average, its change over the last week, and change since the first entry. */
+export function trendSummary(points: Point[]): TrendSummary {
+  const trend = rollingAverage(points)
   if (trend.length === 0) {
     return { latest: null, latestDate: null, currentAvg: null, weekChange: null, totalChange: null }
   }
@@ -66,6 +64,12 @@ export function weightSummary(logs: Pick<DailyLog, 'log_date' | 'weight_kg'>[]):
     weekChange: weekAgo == null ? null : last.avg - weekAgo,
     totalChange: trend.length > 1 ? last.avg - trend[0].value : null,
   }
+}
+
+export type WeightSummary = TrendSummary
+
+export function weightSummary(logs: Pick<DailyLog, 'log_date' | 'weight_kg'>[]): WeightSummary {
+  return trendSummary(logs.filter((l) => l.weight_kg != null).map((l) => ({ date: l.log_date, value: Number(l.weight_kg) })))
 }
 
 // ---------------------------------------------------------------------------
