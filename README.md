@@ -100,6 +100,10 @@ API_URL=... ANON_KEY=... DB_URL=... node scripts/rls-check.mjs   # security rule
 Migrations so far, in order:
 1. `20260929000000_init.sql`: core tables and security rules
 2. `20261008000000_welcome_and_photos.sql`: welcome-flow profile fields and private progress-photo storage
+3. `20261009000000_questionnaire_and_body_stats.sql`: coaching questionnaire, Google Form import, smart-scale stats, water
+
+**The coaching questionnaire** is defined in `src/lib/questionnaire.ts`. Edit questions there (keep each `key` unchanged so saved answers still line up).
+Old Google Form answers can be loaded into the `questionnaire_imports` table (never commit that data to this repo); clients pick them up automatically by matching email.
 
 ### Project layout
 ```

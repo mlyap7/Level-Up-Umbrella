@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { deleteDailyLog, deleteMeasurement } from '../lib/api'
+import { clearDailyField, deleteMeasurement } from '../lib/api'
 import { addDays, formatFullDate, formatShortDate, todayISO } from '../lib/dates'
-import { rollingAverage, weightSummary } from '../lib/stats'
-import type { LengthUnit, WeightUnit } from '../lib/types'
+import { rollingAverage, trendSummary } from '../lib/stats'
+import type { DailyLog, LengthUnit, WeightUnit } from '../lib/types'
 import { cmTo, formatChange, kgTo } from '../lib/units'
 import type { ProgressData } from '../lib/useProgressData'
 import { ProgressChart } from './ProgressChart'
@@ -17,67 +17,90 @@ const RANGES = [
 
 type RangeKey = (typeof RANGES)[number]['key']
 
+/** Numbers logged every morning. All get a 7-day trend line. */
+type DailyField = 'weight_kg' | 'body_fat_pct' | 'muscle_mass_kg' | 'visceral_fat'
+interface DailyMetric { key: string; field: DailyField; label: string; pointLabel: string; kind: 'mass' | 'percent' | 'rating' }
+
+const DAILY_METRICS: DailyMetric[] = [
+  { key: 'weight', field: 'weight_kg', label: 'Weight', pointLabel: 'Weigh-in', kind: 'mass' },
+  { key: 'body_fat', field: 'body_fat_pct', label: 'Body fat', pointLabel: 'Body fat', kind: 'percent' },
+  { key: 'muscle', field: 'muscle_mass_kg', label: 'Muscle', pointLabel: 'Muscle mass', kind: 'mass' },
+  { key: 'visceral', field: 'visceral_fat', label: 'Visceral fat', pointLabel: 'Visceral fat', kind: 'rating' },
+]
+
+const BODY_STAT_NOTE = 'Smart-scale readings swing with hydration. Compare with yourself on the same scale and judge by the orange trend line.'
+
 interface Props {
   data: ProgressData
   weightUnit: WeightUnit
   lengthUnit: LengthUnit
   editable: boolean
+  /** Show body fat / muscle / visceral tabs even before any readings exist. */
+  showBodyStats?: boolean
   onChanged?: () => void
 }
 
-
-export function ProgressPanel({ data, weightUnit, lengthUnit, editable, onChanged }: Props) {
+export function ProgressPanel({ data, weightUnit, lengthUnit, editable, showBodyStats = false, onChanged }: Props) {
   const types = data.types.filter((t) => !t.archived)
   const [metric, setMetric] = useState<string>('weight')
   const [range, setRange] = useState<RangeKey>('3m')
   const [showAll, setShowAll] = useState(false)
 
-  const activeType = types.find((t) => t.id === metric)
-  const isWeight = metric === 'weight' || !activeType
-  const unit = isWeight ? weightUnit : lengthUnit
+  const dailyMetrics = DAILY_METRICS.filter((m) =>
+    m.key === 'weight' || showBodyStats || data.logs.some((l) => l[m.field] != null))
+  const daily = dailyMetrics.find((m) => m.key === metric)
+  const activeType = daily ? undefined : types.find((t) => t.id === metric)
+  const current: DailyMetric = daily ?? (activeType ? DAILY_METRICS[0] : DAILY_METRICS[0])
+  const isDaily = Boolean(daily) || !activeType
+  const isWeight = isDaily && current.key === 'weight'
+
+  const unit = !isDaily ? lengthUnit : current.kind === 'mass' ? weightUnit : current.kind === 'percent' ? '%' : ''
+  const fmt = (v: number) => `${v.toFixed(1)}${unit === '%' ? '%' : unit ? ` ${unit}` : ''}`
   const since = (() => {
     const r = RANGES.find((x) => x.key === range)!
     return r.days == null ? null : addDays(todayISO(), -r.days)
   })()
 
   const allPoints = useMemo(() => {
-    if (isWeight) {
+    if (isDaily) {
+      const f = current.field
       return data.logs
-        .filter((l) => l.weight_kg != null)
-        .map((l) => ({ date: l.log_date, value: kgTo(l.weight_kg!, weightUnit), id: l.id }))
+        .filter((l) => l[f] != null)
+        .map((l) => ({ date: l.log_date, value: current.kind === 'mass' ? kgTo(Number(l[f]), weightUnit) : Number(l[f]), id: l.id }))
     }
     return data.measurements
       .filter((m) => m.type_id === activeType!.id)
       .map((m) => ({ date: m.measured_on, value: cmTo(m.value_cm, lengthUnit), id: m.id }))
       .sort((a, b) => a.date.localeCompare(b.date))
-  }, [isWeight, activeType, data, weightUnit, lengthUnit])
+  }, [isDaily, current, activeType, data, weightUnit, lengthUnit])
 
   // Compute the trend on all data so the first days of a range still have a
   // proper 7-day average, then cut to the range.
   const points = since ? allPoints.filter((p) => p.date >= since) : allPoints
 
   const summary = useMemo(() => {
-    if (isWeight) {
-      const s = weightSummary(data.logs)
+    const changeUnit = unit === '%' ? 'pts' : unit
+    if (isDaily) {
+      const s = trendSummary(allPoints)
       return [
-        { label: '7-day average', value: s.currentAvg == null ? '–' : `${kgTo(s.currentAvg, weightUnit).toFixed(1)} ${weightUnit}` },
-        { label: 'vs last week', value: formatChange(s.weekChange == null ? null : kgTo(s.weekChange, weightUnit), weightUnit) },
-        { label: 'Since start', value: formatChange(s.totalChange == null ? null : kgTo(s.totalChange, weightUnit), weightUnit) },
+        { label: '7-day average', value: s.currentAvg == null ? '–' : fmt(s.currentAvg) },
+        { label: 'vs last week', value: formatChange(s.weekChange, changeUnit) },
+        { label: 'Since start', value: formatChange(s.totalChange, changeUnit) },
       ]
     }
     const latest = allPoints[allPoints.length - 1]
     const prev = allPoints[allPoints.length - 2]
     const first = allPoints[0]
     return [
-      { label: 'Latest', value: latest ? `${latest.value.toFixed(1)} ${lengthUnit}` : '–' },
+      { label: 'Latest', value: latest ? fmt(latest.value) : '–' },
       { label: 'vs previous', value: latest && prev ? formatChange(latest.value - prev.value, lengthUnit) : '–' },
       { label: 'Since start', value: latest && first && allPoints.length > 1 ? formatChange(latest.value - first.value, lengthUnit) : '–' },
     ]
-  }, [isWeight, data.logs, allPoints, weightUnit, lengthUnit])
+  }, [isDaily, allPoints, unit, lengthUnit]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const trendByDate = useMemo(
-    () => (isWeight ? new Map(rollingAverage(allPoints).map((p) => [p.date, p.avg])) : new Map<string, number>()),
-    [isWeight, allPoints],
+    () => (isDaily ? new Map(rollingAverage(allPoints).map((p) => [p.date, p.avg])) : new Map<string, number>()),
+    [isDaily, allPoints],
   )
   const logsByDate = useMemo(() => new Map(data.logs.map((l) => [l.log_date, l])), [data.logs])
   const history = [...allPoints].reverse()
@@ -85,19 +108,27 @@ export function ProgressPanel({ data, weightUnit, lengthUnit, editable, onChange
 
   async function remove(id: string) {
     if (!confirm('Delete this entry?')) return
-    if (isWeight) await deleteDailyLog(id)
+    // Clear just this number, keeping the rest of that day (sleep, steps, water…).
+    if (isDaily) await clearDailyField(id, current.field)
     else await deleteMeasurement(id)
     onChanged?.()
   }
 
-  const label = isWeight ? 'Weight' : activeType!.name
+  const label = isDaily ? current.label : activeType!.name
+  const cell = (log: DailyLog | undefined, f: 'steps' | 'sleep_hours' | 'water_l') => {
+    const v = log?.[f]
+    if (v == null) return '–'
+    return f === 'steps' ? v.toLocaleString() : f === 'sleep_hours' ? `${v} h` : `${v} L`
+  }
 
   return (
     <div className="stack">
       <Card>
         <div className="row-between" style={{ marginBottom: 12 }}>
           <div className="segmented" role="group" aria-label="Metric">
-            <button type="button" aria-pressed={isWeight} onClick={() => setMetric('weight')}>Weight</button>
+            {dailyMetrics.map((m) => (
+              <button key={m.key} type="button" aria-pressed={isDaily && current.key === m.key} onClick={() => setMetric(m.key)}>{m.label}</button>
+            ))}
             {types.map((t) => (
               <button key={t.id} type="button" aria-pressed={metric === t.id} onClick={() => setMetric(t.id)}>{t.name}</button>
             ))}
@@ -116,10 +147,12 @@ export function ProgressPanel({ data, weightUnit, lengthUnit, editable, onChange
             </div>
           ))}
         </div>
-        <ProgressChart points={points} unit={unit} label={isWeight ? 'Weigh-in' : label} showTrend={isWeight} />
-        {isWeight && points.length > 0 && (
+        <ProgressChart points={points} unit={unit} label={isDaily ? current.pointLabel : label} showTrend={isDaily} />
+        {isDaily && points.length > 0 && (
           <p className="small muted" style={{ marginTop: 8, marginBottom: 0 }}>
-            Daily weight moves up and down with water, salt, carbs and your cycle. Judge progress by the orange line, not single days.
+            {isWeight
+              ? 'Daily weight moves up and down with water, salt, carbs and your cycle. Judge progress by the orange line, not single days.'
+              : BODY_STAT_NOTE}
           </p>
         )}
       </Card>
@@ -135,9 +168,10 @@ export function ProgressPanel({ data, weightUnit, lengthUnit, editable, onChange
                   <tr>
                     <th>Date</th>
                     <th>{label}</th>
-                    {isWeight && <th>7-day avg</th>}
+                    {isDaily && <th>7-day avg</th>}
                     {isWeight && <th>Steps</th>}
                     {isWeight && <th>Sleep</th>}
+                    {isWeight && <th>Water</th>}
                     {editable && <th aria-label="Actions" />}
                   </tr>
                 </thead>
@@ -148,10 +182,11 @@ export function ProgressPanel({ data, weightUnit, lengthUnit, editable, onChange
                     return (
                       <tr key={p.id}>
                         <td style={{ whiteSpace: 'nowrap' }}>{formatShortDate(p.date)}</td>
-                        <td style={{ whiteSpace: 'nowrap' }}>{p.value.toFixed(1)} {unit}</td>
-                        {isWeight && <td style={{ whiteSpace: 'nowrap' }}>{avg != null ? `${avg.toFixed(1)} ${unit}` : '–'}</td>}
-                        {isWeight && <td>{log?.steps != null ? log.steps.toLocaleString() : '–'}</td>}
-                        {isWeight && <td style={{ whiteSpace: 'nowrap' }}>{log?.sleep_hours != null ? `${log.sleep_hours} h` : '–'}</td>}
+                        <td style={{ whiteSpace: 'nowrap' }}>{fmt(p.value)}</td>
+                        {isDaily && <td style={{ whiteSpace: 'nowrap' }}>{avg != null ? fmt(avg) : '–'}</td>}
+                        {isWeight && <td>{cell(log, 'steps')}</td>}
+                        {isWeight && <td style={{ whiteSpace: 'nowrap' }}>{cell(log, 'sleep_hours')}</td>}
+                        {isWeight && <td style={{ whiteSpace: 'nowrap' }}>{cell(log, 'water_l')}</td>}
                         {editable && (
                           <td style={{ textAlign: 'right' }}>
                             <button className="icon-btn" aria-label={`Delete entry for ${formatFullDate(p.date)}`} onClick={() => void remove(p.id)}>×</button>

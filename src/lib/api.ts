@@ -44,7 +44,11 @@ export async function checkSignupCode(code: string): Promise<boolean> {
 // ---------------------------------------------------------------- daily logs
 
 function toDailyLog(r: Record<string, unknown>): DailyLog {
-  return { ...(r as unknown as DailyLog), weight_kg: num(r.weight_kg), sleep_hours: num(r.sleep_hours), steps: num(r.steps) }
+  return {
+    ...(r as unknown as DailyLog),
+    weight_kg: num(r.weight_kg), sleep_hours: num(r.sleep_hours), steps: num(r.steps),
+    water_l: num(r.water_l), body_fat_pct: num(r.body_fat_pct), muscle_mass_kg: num(r.muscle_mass_kg), visceral_fat: num(r.visceral_fat),
+  }
 }
 
 export async function listDailyLogs(clientId: string, since?: string): Promise<DailyLog[]> {
@@ -59,13 +63,20 @@ export async function listAllDailyLogs(since: string): Promise<DailyLog[]> {
   return (rows as Record<string, unknown>[]).map(toDailyLog)
 }
 
-export async function upsertDailyLog(clientId: string, log: { log_date: string } & Partial<Pick<DailyLog, 'weight_kg' | 'steps' | 'sleep_hours'>>) {
+export type DailyFields = Partial<Pick<DailyLog, 'weight_kg' | 'steps' | 'sleep_hours' | 'water_l' | 'body_fat_pct' | 'muscle_mass_kg' | 'visceral_fat'>>
+
+export async function upsertDailyLog(clientId: string, log: { log_date: string } & DailyFields) {
   unwrap(await supabase.from('daily_logs').upsert({ client_id: clientId, ...log }, { onConflict: 'client_id,log_date' }))
 }
 
 /** Saves several days one at a time. Each row only updates the columns it includes. */
-export async function upsertDailyLogs(clientId: string, logs: ({ log_date: string } & Partial<Pick<DailyLog, 'weight_kg' | 'steps' | 'sleep_hours'>>)[]) {
+export async function upsertDailyLogs(clientId: string, logs: ({ log_date: string } & DailyFields)[]) {
   for (const log of logs) await upsertDailyLog(clientId, log)
+}
+
+/** Clears one number from a day without touching the rest of that day's log. */
+export async function clearDailyField(id: string, field: 'weight_kg' | 'body_fat_pct' | 'muscle_mass_kg' | 'visceral_fat') {
+  unwrap(await supabase.from('daily_logs').update({ [field]: null }).eq('id', id))
 }
 
 export async function deleteDailyLog(id: string) {
@@ -302,4 +313,32 @@ export async function savePhoto(clientId: string, takenOn: string, pose: Pose, i
 export async function deletePhoto(photo: ProgressPhoto) {
   unwrap(await supabase.from('progress_photos').delete().eq('id', photo.id))
   await supabase.storage.from(PHOTO_BUCKET).remove([photo.storage_path])
+}
+
+// ---------------------------------------------------------------- questionnaire
+
+export interface QuestionnaireRow {
+  client_id: string
+  answers: Record<string, unknown>
+  submitted_at: string | null
+  imported: boolean
+  updated_at: string
+}
+
+/** Attaches answers from the old Google Form if this client's email matches. */
+export async function claimQuestionnaireImport(): Promise<boolean> {
+  const res = await supabase.rpc('claim_questionnaire_import')
+  if (res.error) return false
+  return res.data === true
+}
+
+export async function getQuestionnaire(clientId: string): Promise<QuestionnaireRow | null> {
+  return unwrap(await supabase.from('questionnaire_responses').select('*').eq('client_id', clientId).maybeSingle()) as QuestionnaireRow | null
+}
+
+export async function saveQuestionnaire(clientId: string, answers: Record<string, unknown>, submit = false) {
+  unwrap(await supabase.from('questionnaire_responses').upsert(
+    { client_id: clientId, answers, ...(submit ? { submitted_at: new Date().toISOString() } : {}) },
+    { onConflict: 'client_id' },
+  ))
 }

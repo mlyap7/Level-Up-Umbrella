@@ -13,6 +13,7 @@ import { ProgramEditor } from '../../components/ProgramEditor'
 import { ProgressPanel } from '../../components/ProgressPanel'
 import { SessionHistory } from '../../components/SessionHistory'
 import { PhotosView } from '../../components/PhotosView'
+import { QuestionnaireView } from '../../components/QuestionnaireView'
 import { Card, ErrorMsg, Loading } from '../../components/ui'
 import type { Profile } from '../../lib/types'
 
@@ -54,13 +55,15 @@ export function ClientDetail() {
             reload()
           }}>{client.archived ? 'Restore client' : 'Archive client'}</button>
         </div>
-        {client.goal_note && <p className="small" style={{ marginTop: 8, marginBottom: 0 }}><span className="muted">In their words:</span> {client.goal_note}</p>}
+        {client.main_goal && <p className="small" style={{ marginTop: 8, marginBottom: 0 }}><span className="muted">Main goal:</span> {client.main_goal}</p>}
+        {client.goal_note && <p className="small" style={{ marginTop: 4, marginBottom: 0 }}><span className="muted">Why it matters:</span> {client.goal_note}</p>}
       </div>
       <nav className="tabs" aria-label="Client sections">
         <NavLink to={base} end className={cls}>Progress</NavLink>
         <NavLink to={`${base}/check-ins`} className={cls}>Check-ins</NavLink>
         <NavLink to={`${base}/training`} className={cls}>Training</NavLink>
         <NavLink to={`${base}/photos`} className={cls}>Photos</NavLink>
+        <NavLink to={`${base}/questionnaire`} className={cls}>Questionnaire</NavLink>
         <NavLink to={`${base}/journal`} className={cls}>Journal</NavLink>
       </nav>
       <Routes>
@@ -68,6 +71,7 @@ export function ClientDetail() {
         <Route path="check-ins" element={<ClientCheckIns client={client} />} />
         <Route path="training" element={<ClientTraining client={client} />} />
         <Route path="photos" element={<PhotosView clientId={client.id} editable={false} startedOn={client.coaching_started_on ?? null} />} />
+        <Route path="questionnaire" element={<QuestionnaireView clientId={client.id} />} />
         <Route path="journal" element={<ClientJournal client={client} />} />
       </Routes>
     </div>
@@ -79,7 +83,7 @@ function ClientProgress({ client }: { client: Profile }) {
   const { data, error, loading } = useProgressData(client.id)
   if (loading && !data) return <Loading />
   if (error || !data) return <ErrorMsg error={error ?? 'Could not load.'} />
-  return <ProgressPanel data={data} weightUnit={coach.weight_unit} lengthUnit={coach.length_unit} editable={false} />
+  return <ProgressPanel data={data} weightUnit={coach.weight_unit} lengthUnit={coach.length_unit} editable={false} showBodyStats={Boolean(client.has_smart_scale)} />
 }
 
 function ClientCheckIns({ client }: { client: Profile }) {

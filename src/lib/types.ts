@@ -18,6 +18,9 @@ export interface Profile {
   onboarded_at?: string | null
   goal_weight_kg?: number | string | null
   coaching_started_on?: string | null
+  // Added by the questionnaire/body-stats migration.
+  main_goal?: string
+  has_smart_scale?: boolean
 }
 
 export interface DailyLog {
@@ -27,6 +30,10 @@ export interface DailyLog {
   weight_kg: number | null
   steps: number | null
   sleep_hours: number | null
+  water_l?: number | null
+  body_fat_pct?: number | null
+  muscle_mass_kg?: number | null
+  visceral_fat?: number | null
 }
 
 export interface MeasurementType {

@@ -16,6 +16,7 @@ import { Journal } from './pages/client/Journal'
 import { ProfilePage } from './pages/client/Profile'
 import { Welcome } from './pages/client/Welcome'
 import { PhotosPage } from './pages/client/Photos'
+import { QuestionnairePage } from './pages/client/Questionnaire'
 import { CoachHome } from './pages/coach/CoachHome'
 import { ClientDetail } from './pages/coach/ClientDetail'
 import { CoachSettings } from './pages/coach/CoachSettings'
@@ -57,6 +58,7 @@ export function App() {
             <Route path="journal" element={<RequireAuth role="client"><Journal /></RequireAuth>} />
             <Route path="profile" element={<RequireAuth role="client"><ProfilePage /></RequireAuth>} />
             <Route path="photos" element={<RequireAuth role="client"><PhotosPage /></RequireAuth>} />
+            <Route path="questionnaire" element={<RequireAuth role="client"><QuestionnairePage /></RequireAuth>} />
 
             <Route path="coach" element={<RequireAuth role="coach"><CoachHome /></RequireAuth>} />
             <Route path="coach/settings" element={<RequireAuth role="coach"><CoachSettings /></RequireAuth>} />

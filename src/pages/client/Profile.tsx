@@ -20,6 +20,9 @@ export function ProfilePage() {
   const [goalWeight, setGoalWeight] = useState(profile.goal_weight_kg != null ? String(round(kgTo(Number(profile.goal_weight_kg), profile.weight_unit))) : '')
   const [startedOn, setStartedOn] = useState(profile.coaching_started_on ?? '')
   const hasSetupFields = profile.onboarded_at !== undefined // false until the welcome-flow database update runs
+  const hasNewFields = profile.has_smart_scale !== undefined // false until the questionnaire database update runs
+  const [mainGoal, setMainGoal] = useState(profile.main_goal ?? '')
+  const [smartScale, setSmartScale] = useState(Boolean(profile.has_smart_scale))
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -48,6 +51,7 @@ export function ProfilePage() {
         ...(hasSetupFields && profile.role === 'client'
           ? { goal_weight_kg: gwKg == null ? null : round(gwKg, 1), coaching_started_on: startedOn || null }
           : {}),
+        ...(hasNewFields && profile.role === 'client' ? { main_goal: mainGoal.trim(), has_smart_scale: smartScale } : {}),
       })
       await refreshProfile()
       setSaved(true)
@@ -93,9 +97,23 @@ export function ProfilePage() {
                   <option value="maintain">Maintain and recomp</option>
                 </select>
               </label>
-              <label className="field">In your own words <span className="hint">What would make this coaching a success for you?</span>
+              {hasNewFields && (
+                <label className="field">Main health goal
+                  <textarea value={mainGoal} onChange={(e) => setMainGoal(e.target.value)} rows={2} maxLength={1000} />
+                </label>
+              )}
+              <label className="field">Why is this goal important to you?
                 <textarea value={goalNote} onChange={(e) => setGoalNote(e.target.value)} rows={3} maxLength={1000} />
               </label>
+              {hasNewFields && (
+                <label className="switch-row">
+                  <span>
+                    <strong>I have a smart scale</strong>
+                    <span className="small muted" style={{ display: 'block' }}>Adds body fat %, muscle mass and visceral fat to your morning check-in.</span>
+                  </span>
+                  <input type="checkbox" role="switch" className="switch" checked={smartScale} onChange={(e) => setSmartScale(e.target.checked)} />
+                </label>
+              )}
               {hasSetupFields && (
                 <div className="form-row">
                   <label className="field">Rough target weight <span className="hint">For your coach, not shown on your charts</span>
