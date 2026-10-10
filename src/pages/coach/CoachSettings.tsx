@@ -2,13 +2,16 @@ import { useState, type FormEvent } from 'react'
 import { getSignupCode, setSignupCode } from '../../lib/api'
 import { useAsync } from '../../lib/useAsync'
 import { Card, ErrorMsg, Loading } from '../../components/ui'
-import { ProfilePage } from '../client/Profile'
+import { Link } from 'react-router-dom'
 
 export function CoachSettings() {
   return (
     <div className="stack" style={{ maxWidth: 640 }}>
+      <h1>Settings</h1>
       <SignupCodeCard />
-      <ProfilePage />
+      <Card title="Your profile and reminders">
+        <p className="small" style={{ margin: 0 }}>Your name, units, goals and reminders are in <Link to="/profile">My journey → Profile</Link>.</p>
+      </Card>
     </div>
   )
 }

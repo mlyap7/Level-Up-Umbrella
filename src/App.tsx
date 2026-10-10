@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
 import { isConfigured } from './lib/supabase'
+import { getCoachMode } from './lib/mode'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { Loading } from './components/ui'
@@ -24,7 +25,8 @@ import { CoachSettings } from './pages/coach/CoachSettings'
 function Home() {
   const { profile, loading } = useAuth()
   if (loading || !profile) return <Loading />
-  return profile.role === 'coach' ? <Navigate to="/coach" replace /> : <Dashboard />
+  // Coaches land where they were last: coaching, or their own journey.
+  return profile.role === 'coach' && getCoachMode() === 'coaching' ? <Navigate to="/coach" replace /> : <Dashboard />
 }
 
 export function App() {
@@ -48,17 +50,17 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/update-password" element={<UpdatePassword />} />
 
-          <Route path="/welcome" element={<RequireAuth role="client"><Welcome /></RequireAuth>} />
+          <Route path="/welcome" element={<RequireAuth><Welcome /></RequireAuth>} />
 
           <Route element={<RequireAuth><Layout /></RequireAuth>}>
             <Route index element={<Home />} />
-            <Route path="training" element={<RequireAuth role="client"><Training /></RequireAuth>} />
-            <Route path="training/log/:workoutId" element={<RequireAuth role="client"><LogWorkout /></RequireAuth>} />
-            <Route path="check-in" element={<RequireAuth role="client"><CheckIns /></RequireAuth>} />
-            <Route path="journal" element={<RequireAuth role="client"><Journal /></RequireAuth>} />
-            <Route path="profile" element={<RequireAuth role="client"><ProfilePage /></RequireAuth>} />
-            <Route path="photos" element={<RequireAuth role="client"><PhotosPage /></RequireAuth>} />
-            <Route path="questionnaire" element={<RequireAuth role="client"><QuestionnairePage /></RequireAuth>} />
+            <Route path="training" element={<RequireAuth><Training /></RequireAuth>} />
+            <Route path="training/log/:workoutId" element={<RequireAuth><LogWorkout /></RequireAuth>} />
+            <Route path="check-in" element={<RequireAuth><CheckIns /></RequireAuth>} />
+            <Route path="journal" element={<RequireAuth><Journal /></RequireAuth>} />
+            <Route path="profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+            <Route path="photos" element={<RequireAuth><PhotosPage /></RequireAuth>} />
+            <Route path="questionnaire" element={<RequireAuth><QuestionnairePage /></RequireAuth>} />
 
             <Route path="coach" element={<RequireAuth role="coach"><CoachHome /></RequireAuth>} />
             <Route path="coach/settings" element={<RequireAuth role="coach"><CoachSettings /></RequireAuth>} />

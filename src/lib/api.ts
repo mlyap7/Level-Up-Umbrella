@@ -21,8 +21,13 @@ export async function getProfile(id: string): Promise<Profile> {
   return unwrap(await supabase.from('profiles').select('*').eq('id', id).single()) as Profile
 }
 
-export async function listClients(): Promise<Profile[]> {
-  return unwrap(await supabase.from('profiles').select('*').eq('role', 'client').order('full_name')) as Profile[]
+/** Everyone the signed-in coach can see: clients, plus coaches they coach (always themselves). */
+export async function listPeople(): Promise<Profile[]> {
+  return unwrap(await supabase.from('profiles').select('*').order('full_name')) as Profile[]
+}
+
+export async function setCoach(id: string, make: boolean) {
+  unwrap(await supabase.rpc('set_coach', { target: id, make }))
 }
 
 export async function setClientArchived(id: string, archive: boolean) {

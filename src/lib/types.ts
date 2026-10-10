@@ -27,6 +27,8 @@ export interface Profile {
   remind_photos?: boolean
   remind_water?: boolean
   water_every_hours?: 2 | 3
+  // Added by the coach-team migration.
+  head_coach?: boolean
 }
 
 export interface DailyLog {
@@ -87,6 +89,8 @@ export interface CheckInComment {
   id: string
   check_in_id: string
   author_id: string
+  // First name of the author, filled in by the database (coach-team migration).
+  author_name?: string
   body: string
   created_at: string
 }

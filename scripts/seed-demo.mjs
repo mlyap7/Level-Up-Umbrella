@@ -22,6 +22,7 @@ async function account(email, name) {
 
 const coach = await account('coach@demo.test', 'Coach Demo')
 sql(`update public.profiles set role = 'coach' where id = '${coach.id}'`)
+sql(`update public.profiles set head_coach = true where id = '${coach.id}'`)
 const sarah = await account('sarah@demo.test', 'Sarah Tan')
 const jay = await account('jay@demo.test', 'Jay Lim')
 await sarah.c.from('profiles').update({ goal_type: 'lose', goal_note: 'I want to feel confident on my wedding day and keep the habits after.', main_goal: 'Drop a dress size before my wedding in March and feel strong', has_smart_scale: true, height_cm: 163 }).eq('id', sarah.id)
@@ -99,4 +100,13 @@ if (existing.length === 0) {
     { session_id: s1.id, exercise_name: 'Romanian deadlift', set_number: 2, weight_kg: 50, reps: 10 },
   ])
 }
-console.log('Demo data ready. Log in as coach@demo.test or sarah@demo.test, password: password123')
+// A second coach who tracks her own progress (only the head coach sees it).
+const aisha = await account('aisha@demo.test', 'Aisha Rahman')
+sql(`update public.profiles set role = 'coach' where id = '${aisha.id}'`)
+await aisha.c.from('profiles').update({ goal_type: 'maintain', onboarded_at: new Date().toISOString(), coaching_started_on: daysAgo(20), height_cm: 160 }).eq('id', aisha.id)
+for (let i = 14; i >= 0; i--) {
+  await aisha.c.from('daily_logs').upsert({ client_id: aisha.id, log_date: daysAgo(i), weight_kg: +(58.2 - (14 - i) * 0.03 + Math.sin(i) * 0.3).toFixed(1) }, { onConflict: 'client_id,log_date' })
+}
+await aisha.c.from('check_ins').upsert({ client_id: aisha.id, week_start: monday(0), adherence: 7, energy: 6, hunger: 5, sleep_quality: 5, stress: 7, digestion: 7, wins: 'Hit all 3 sessions', struggles: 'Late nights with client calls', questions: '' }, { onConflict: 'client_id,week_start' })
+
+console.log('Demo data ready. Log in as coach@demo.test (head coach), aisha@demo.test (coach) or sarah@demo.test, password: password123')

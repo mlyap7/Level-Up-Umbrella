@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useProfile } from '../../lib/auth'
 import { useProgressData } from '../../lib/useProgressData'
 import { ProgressPanel } from '../../components/ProgressPanel'
@@ -20,9 +21,19 @@ export function Dashboard() {
   return (
     <div className="stack">
       <h1>{firstName ? `Hey ${firstName}` : 'Your progress'}</h1>
-      <InstallCard />
+      {profile.role === 'coach' && profile.onboarded_at === null && (
+        <section className="promo-card" aria-label="Set up your journey">
+          <span className="tour-icon" aria-hidden>🚀</span>
+          <div className="grow">
+            <h2 style={{ marginBottom: 4 }}>Set up your own journey</h2>
+            <p className="small" style={{ margin: '0 0 10px' }}>Add your goal, height and starting numbers, the same 2-minute setup your clients do.</p>
+            <Link to="/welcome" className="btn btn-sm">Start setup</Link>
+          </div>
+        </section>
+      )}
+      {profile.role !== 'coach' && <InstallCard />}
       {profile.remind_morning !== undefined && <RemindersCard />}
-      <QuestionnairePromo clientId={profile.id} />
+      {!profile.head_coach && <QuestionnairePromo clientId={profile.id} />}
       {data.measurements.length === 0 && (
         <section className="promo-card" aria-label="Starting measurements">
           <span className="tour-icon" aria-hidden>📏</span>

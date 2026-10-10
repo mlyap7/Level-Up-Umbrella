@@ -49,10 +49,10 @@ export function ProfilePage() {
       await updateProfile(profile.id, {
         full_name: name.trim(), weight_unit: weightUnit, length_unit: lengthUnit,
         goal_type: goalType, goal_note: goalNote.trim(), height_cm: hCm == null ? null : round(hCm, 1),
-        ...(hasSetupFields && profile.role === 'client'
+        ...(hasSetupFields
           ? { goal_weight_kg: gwKg == null ? null : round(gwKg, 1), coaching_started_on: startedOn || null }
           : {}),
-        ...(hasNewFields && profile.role === 'client' ? { main_goal: mainGoal.trim(), has_smart_scale: smartScale } : {}),
+        ...(hasNewFields ? { main_goal: mainGoal.trim(), has_smart_scale: smartScale } : {}),
       })
       await refreshProfile()
       setSaved(true)
@@ -89,43 +89,39 @@ export function ProfilePage() {
           <label className="field">Height
             <UnitInput unit={lengthUnit} value={height} onChange={(e) => setHeight(e.target.value)} />
           </label>
-          {profile.role === 'client' && (
-            <>
-              <label className="field">Main goal
-                <select value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
-                  <option value="lose">Lose fat</option>
-                  <option value="gain">Build muscle / gain weight</option>
-                  <option value="maintain">Maintain and recomp</option>
-                </select>
+          <label className="field">Main goal
+            <select value={goalType} onChange={(e) => setGoalType(e.target.value as GoalType)}>
+              <option value="lose">Lose fat</option>
+              <option value="gain">Build muscle / gain weight</option>
+              <option value="maintain">Maintain and recomp</option>
+            </select>
+          </label>
+          {hasNewFields && (
+            <label className="field">Main health goal
+              <textarea value={mainGoal} onChange={(e) => setMainGoal(e.target.value)} rows={2} maxLength={1000} />
+            </label>
+          )}
+          <label className="field">Why is this goal important to you?
+            <textarea value={goalNote} onChange={(e) => setGoalNote(e.target.value)} rows={3} maxLength={1000} />
+          </label>
+          {hasNewFields && (
+            <label className="switch-row">
+              <span>
+                <strong>I have a smart scale</strong>
+                <span className="small muted" style={{ display: 'block' }}>Adds body fat %, muscle mass and visceral fat to your morning check-in.</span>
+              </span>
+              <input type="checkbox" role="switch" className="switch" checked={smartScale} onChange={(e) => setSmartScale(e.target.checked)} />
+            </label>
+          )}
+          {hasSetupFields && (
+            <div className="form-row">
+              <label className="field">Rough target weight <span className="hint">For your coach, not shown on your charts</span>
+                <UnitInput unit={weightUnit} value={goalWeight} onChange={(e) => setGoalWeight(e.target.value)} />
               </label>
-              {hasNewFields && (
-                <label className="field">Main health goal
-                  <textarea value={mainGoal} onChange={(e) => setMainGoal(e.target.value)} rows={2} maxLength={1000} />
-                </label>
-              )}
-              <label className="field">Why is this goal important to you?
-                <textarea value={goalNote} onChange={(e) => setGoalNote(e.target.value)} rows={3} maxLength={1000} />
+              <label className="field">Started with Level Up
+                <input type="date" value={startedOn} max={todayISO()} onChange={(e) => setStartedOn(e.target.value)} />
               </label>
-              {hasNewFields && (
-                <label className="switch-row">
-                  <span>
-                    <strong>I have a smart scale</strong>
-                    <span className="small muted" style={{ display: 'block' }}>Adds body fat %, muscle mass and visceral fat to your morning check-in.</span>
-                  </span>
-                  <input type="checkbox" role="switch" className="switch" checked={smartScale} onChange={(e) => setSmartScale(e.target.checked)} />
-                </label>
-              )}
-              {hasSetupFields && (
-                <div className="form-row">
-                  <label className="field">Rough target weight <span className="hint">For your coach, not shown on your charts</span>
-                    <UnitInput unit={weightUnit} value={goalWeight} onChange={(e) => setGoalWeight(e.target.value)} />
-                  </label>
-                  <label className="field">Started with Level Up
-                    <input type="date" value={startedOn} max={todayISO()} onChange={(e) => setStartedOn(e.target.value)} />
-                  </label>
-                </div>
-              )}
-            </>
+            </div>
           )}
           <ErrorMsg error={error} />
           {saved && <div className="alert alert-ok" role="status">Profile saved.</div>}
@@ -134,7 +130,7 @@ export function ProfilePage() {
       </Card>
       <ReminderSettings />
       <InstallSection />
-      {profile.role === 'client' && <MeasurementTypesCard clientId={profile.id} />}
+      <MeasurementTypesCard clientId={profile.id} />
     </div>
   )
 }

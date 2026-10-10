@@ -16,7 +16,7 @@ export function Login() {
 
   if (session && profile) {
     const from = (location.state as { from?: string } | null)?.from
-    return <Navigate to={from ?? (profile.role === 'coach' ? '/coach' : '/')} replace />
+    return <Navigate to={from ?? '/'} replace />
   }
 
   async function submit(e: FormEvent) {
