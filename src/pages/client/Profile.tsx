@@ -7,6 +7,7 @@ import { todayISO } from '../../lib/dates'
 import { useAsync } from '../../lib/useAsync'
 import { Card, ErrorMsg, Loading, UnitInput } from '../../components/ui'
 import { InstallSection } from '../../components/InstallCard'
+import { ReminderSettings } from '../../components/ReminderSettings'
 
 export function ProfilePage() {
   const profile = useProfile()
@@ -131,6 +132,7 @@ export function ProfilePage() {
           <button className="btn" disabled={busy}>Save profile</button>
         </form>
       </Card>
+      <ReminderSettings />
       <InstallSection />
       {profile.role === 'client' && <MeasurementTypesCard clientId={profile.id} />}
     </div>

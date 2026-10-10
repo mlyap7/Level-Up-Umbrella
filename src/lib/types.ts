@@ -21,6 +21,12 @@ export interface Profile {
   // Added by the questionnaire/body-stats migration.
   main_goal?: string
   has_smart_scale?: boolean
+  // Added by the reminders migration.
+  remind_morning?: boolean
+  remind_checkin?: boolean
+  remind_photos?: boolean
+  remind_water?: boolean
+  water_every_hours?: 2 | 3
 }
 
 export interface DailyLog {
