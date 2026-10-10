@@ -101,6 +101,13 @@ Migrations so far, in order:
 1. `20260929000000_init.sql`: core tables and security rules
 2. `20261008000000_welcome_and_photos.sql`: welcome-flow profile fields and private progress-photo storage
 3. `20261009000000_questionnaire_and_body_stats.sql`: coaching questionnaire, Google Form import, smart-scale stats, water
+4. `20261010000000_reminders.sql`: push-notification reminders (settings, devices, schedule rules)
+
+### Reminders (push notifications)
+- **When:** morning check-in 8am (if no weight logged), Sunday check-in 7pm, photo week Saturday 9am, optional water reminders 10am–8pm every 2 or 3 hours. All Malaysia time; rules live in `due_push_reminders()` in the migration above.
+- **Sender:** `supabase/functions/send-reminders/index.ts`, an Edge Function deployed with **Verify JWT off** (it checks callers itself). A pg_cron job calls it every 15 minutes.
+- **Keys:** the public key is in `src/lib/push.ts`; the private key and scheduler password live only in the `push_config` table (set up with a private SQL file, never committed).
+- iPhone: notifications only work in the app added to the home screen (iOS 16.4+).
 
 **The coaching questionnaire** is defined in `src/lib/questionnaire.ts`. Edit questions there (keep each `key` unchanged so saved answers still line up).
 Old Google Form answers can be loaded into the `questionnaire_imports` table (never commit that data to this repo); clients pick them up automatically by matching email.

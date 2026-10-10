@@ -12,7 +12,8 @@ const num = (v: unknown): number | null => (v == null ? null : Number(v))
 
 export async function updateProfile(id: string, patch: Partial<Pick<Profile,
   'full_name' | 'weight_unit' | 'length_unit' | 'goal_type' | 'goal_note' | 'height_cm'
-  | 'onboarded_at' | 'goal_weight_kg' | 'coaching_started_on'>>) {
+  | 'onboarded_at' | 'goal_weight_kg' | 'coaching_started_on' | 'main_goal' | 'has_smart_scale'
+  | 'remind_morning' | 'remind_checkin' | 'remind_photos' | 'remind_water' | 'water_every_hours'>>) {
   unwrap(await supabase.from('profiles').update(patch).eq('id', id))
 }
 

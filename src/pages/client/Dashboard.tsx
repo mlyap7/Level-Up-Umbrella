@@ -7,6 +7,7 @@ import { ErrorMsg, Loading } from '../../components/ui'
 import { InstallCard } from '../../components/InstallCard'
 import { PhotosPromo } from '../../components/PhotosPromo'
 import { QuestionnairePromo } from '../../components/QuestionnairePromo'
+import { RemindersCard } from '../../components/RemindersCard'
 
 export function Dashboard() {
   const profile = useProfile()
@@ -20,6 +21,7 @@ export function Dashboard() {
     <div className="stack">
       <h1>{firstName ? `Hey ${firstName}` : 'Your progress'}</h1>
       <InstallCard />
+      {profile.remind_morning !== undefined && <RemindersCard />}
       <QuestionnairePromo clientId={profile.id} />
       {data.measurements.length === 0 && (
         <section className="promo-card" aria-label="Starting measurements">
