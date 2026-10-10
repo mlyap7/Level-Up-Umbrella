@@ -4,7 +4,7 @@
 // never saved twice.
 
 export interface SetDraft { weight: string; reps: string; rpe: string; done: boolean }
-export interface ExerciseDraft { name: string; target: string; notes: string; sets: SetDraft[] }
+export interface ExerciseDraft { name: string; target: string; notes: string; video?: string; sets: SetDraft[] }
 
 export interface WorkoutDraft {
   workoutId: string          // program workout id, or "custom"

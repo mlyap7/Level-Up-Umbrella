@@ -1,3 +1,5 @@
+import type { WorkoutDraft } from './programText'
+
 export type Role = 'client' | 'coach'
 export type WeightUnit = 'kg' | 'lb'
 export type LengthUnit = 'cm' | 'in'
@@ -120,6 +122,20 @@ export interface WorkoutExercise {
   target_reps: string
   target_rpe: number | null
   notes: string
+  // Added by the program-templates migration.
+  rest?: string
+  tempo?: string
+  video_url?: string
+}
+
+export interface ProgramTemplate {
+  id: string
+  name: string
+  description: string
+  notes: string
+  workouts: WorkoutDraft[]
+  created_at: string
+  updated_at: string
 }
 
 export interface WorkoutSession {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createSession, listPrograms, listSessions, type FullSession } from '../../lib/api'
 import { useProfile } from '../../lib/auth'
+import { demoLink } from '../../lib/programText'
 import { todayISO } from '../../lib/dates'
 import { FEELINGS, formatSet, lastSetsFor } from '../../lib/training'
 import { kgTo, parseNumber, round, toKg } from '../../lib/units'
@@ -54,8 +55,10 @@ export function LogWorkout() {
     if (resumed || !data?.workout) return
     setExercises(data.workout.exercises.map((e) => ({
       name: e.name,
-      target: [e.target_sets && `${e.target_sets} sets`, e.target_reps && `${e.target_reps} reps`, e.target_rpe && `RPE ${e.target_rpe}`].filter(Boolean).join(' · '),
+      target: [e.target_sets && `${e.target_sets} sets`, e.target_reps && `${e.target_reps} reps`, e.target_rpe && `RPE ${e.target_rpe}`,
+        e.rest && `Rest ${e.rest}`, e.tempo && `Tempo ${e.tempo}`].filter(Boolean).join(' · '),
       notes: e.notes,
+      video: e.video_url ?? '',
       sets: Array.from({ length: e.target_sets ?? 3 }, blankSet),
     })))
   }, [data?.workout]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -168,6 +171,11 @@ export function LogWorkout() {
 
       <Card>
         {exercises.length === 0 && <div className="empty">Add your first exercise below.</div>}
+        {exercises.some((ex) => ex.target.includes('Tempo')) && (
+          <p className="small muted" style={{ margin: '0 0 4px' }}>
+            Tempo 3-1-1 means 3 seconds lowering, 1 second pause, 1 second lifting.
+          </p>
+        )}
         {exercises.map((ex, i) => (
           <ExerciseEditor key={`${ex.name}-${i}`} ex={ex} unit={unit} sessions={data.sessions}
             onChange={(fn) => update(i, fn)}
@@ -211,6 +219,7 @@ function ExerciseEditor({ ex, unit, sessions, onChange, onRemove }: {
       <div className="row-between" style={{ flexWrap: 'nowrap', alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0 }}>
           <strong>{ex.name}</strong>
+          <a className="small" href={demoLink(ex.name, ex.video)} target="_blank" rel="noreferrer" style={{ marginLeft: 8, whiteSpace: 'nowrap' }}>How to ▶</a>
           {doneCount > 0 && <span className="small muted" style={{ marginLeft: 8 }}>{doneCount}/{ex.sets.length} done</span>}
           {ex.target && <div><span className="badge badge-brand">{ex.target}</span></div>}
         </div>

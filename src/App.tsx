@@ -21,6 +21,7 @@ import { QuestionnairePage } from './pages/client/Questionnaire'
 import { CoachHome } from './pages/coach/CoachHome'
 import { ClientDetail } from './pages/coach/ClientDetail'
 import { CoachSettings } from './pages/coach/CoachSettings'
+import { Templates } from './pages/coach/Templates'
 
 function Home() {
   const { profile, loading } = useAuth()
@@ -63,6 +64,7 @@ export function App() {
             <Route path="questionnaire" element={<RequireAuth><QuestionnairePage /></RequireAuth>} />
 
             <Route path="coach" element={<RequireAuth role="coach"><CoachHome /></RequireAuth>} />
+            <Route path="coach/templates" element={<RequireAuth role="coach"><Templates /></RequireAuth>} />
             <Route path="coach/settings" element={<RequireAuth role="coach"><CoachSettings /></RequireAuth>} />
             <Route path="coach/clients/:clientId/*" element={<RequireAuth role="coach"><ClientDetail /></RequireAuth>} />
           </Route>
