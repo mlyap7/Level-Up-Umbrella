@@ -38,7 +38,18 @@ export function Welcome() {
     return { logs, types: types.filter((t) => !t.archived) }
   }, [profile.id])
 
-  const [step, setStep] = useState(0)
+  // Resume where they left off if they leave halfway (the phone remembers the
+  // last step reached). Profile fields alone can't tell us: imported answers
+  // pre-fill some of them before the client has seen those steps.
+  const stepKey = `levelup.welcomeStep.${profile.id}`
+  const [step, setStepState] = useState(() => {
+    try { return Math.min(Number(localStorage.getItem(stepKey)) || 0, 5) } catch { return 0 }
+  })
+  const setStep = (next: number | ((s: number) => number)) => setStepState((s) => {
+    const v = typeof next === 'function' ? next(s) : next
+    try { localStorage.setItem(stepKey, String(v)) } catch { /* private mode: no resume */ }
+    return v
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -144,12 +155,24 @@ export function Welcome() {
     await upsertMeasurements(profile.id, today, rows)
   })
 
-  const finish = () => run(async () => {
+  // Setup counts as done once they've seen the tour, BEFORE the install step.
+  // People install from that step and then open the home-screen app, which on
+  // iPhone starts fresh, so it must already know setup is finished.
+  const completeSetup = () => run(async () => {
     await updateProfile(profile.id, { onboarded_at: new Date().toISOString() })
+    if (platform === 'installed') {
+      await refreshProfile()
+      navigate('/', { replace: true })
+      return false
+    }
+  })
+
+  const finish = () => run(async () => {
     await refreshProfile()
     navigate('/', { replace: true })
     return false
   })
+
 
   const alreadyWeighed = data?.logs.some((l) => l.log_date === today && l.weight_kg != null)
 
@@ -321,7 +344,8 @@ export function Welcome() {
               Meal pics, daily quests, questions and banter all stay on Discord. The app is for your numbers and your progress.
             </TourItem>
           </div>
-          <Next onClick={() => setStep(6)}>Got it</Next>
+          <ErrorMsg error={error} />
+          <Next busy={busy} onClick={completeSetup}>Got it</Next>
         </>
       )
       break
