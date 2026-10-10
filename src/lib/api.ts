@@ -2,8 +2,9 @@
 import { supabase, unwrap } from './supabase'
 import type {
   CheckIn, CheckInComment, DailyLog, JournalEntry, Measurement, MeasurementType,
-  Pose, Profile, Program, ProgramWorkout, ProgressPhoto, SessionSet, WorkoutExercise, WorkoutSession,
+  Pose, Profile, Program, ProgramTemplate, ProgramWorkout, ProgressPhoto, SessionSet, WorkoutExercise, WorkoutSession,
 } from './types'
+import type { WorkoutDraft } from './programText'
 
 // Supabase returns numeric columns as strings; normalise them.
 const num = (v: unknown): number | null => (v == null ? null : Number(v))
@@ -222,7 +223,7 @@ export async function deleteWorkout(id: string) {
   unwrap(await supabase.from('program_workouts').delete().eq('id', id))
 }
 
-export type ExerciseFields = Pick<WorkoutExercise, 'name' | 'target_sets' | 'target_reps' | 'target_rpe' | 'notes' | 'position'>
+export type ExerciseFields = Pick<WorkoutExercise, 'name' | 'target_sets' | 'target_reps' | 'target_rpe' | 'notes' | 'position' | 'rest' | 'tempo' | 'video_url'>
 
 export async function addExercise(workoutId: string, fields: ExerciseFields) {
   unwrap(await supabase.from('workout_exercises').insert({ workout_id: workoutId, ...fields }))
@@ -234,6 +235,39 @@ export async function updateExercise(id: string, patch: Partial<ExerciseFields>)
 
 export async function deleteExercise(id: string) {
   unwrap(await supabase.from('workout_exercises').delete().eq('id', id))
+}
+
+// ---------------------------------------------------------------- program templates
+
+/** Creates a whole program (workouts and exercises) in one step. */
+export async function createProgramFromDraft(clientId: string, name: string, notes: string, workouts: WorkoutDraft[]): Promise<string> {
+  return unwrap(await supabase.rpc('create_program_from_draft', {
+    target: clientId, p_name: name.trim(), p_notes: notes.trim(), p_workouts: workouts,
+  })) as string
+}
+
+export function programToDraft(p: FullProgram): WorkoutDraft[] {
+  return p.workouts.map((w) => ({
+    name: w.name,
+    exercises: w.exercises.map((e) => ({
+      name: e.name, sets: e.target_sets, reps: e.target_reps, rpe: e.target_rpe,
+      rest: e.rest ?? '', tempo: e.tempo ?? '', notes: e.notes, video_url: e.video_url ?? '',
+    })),
+  }))
+}
+
+export async function listTemplates(): Promise<ProgramTemplate[]> {
+  return unwrap(await supabase.from('program_templates').select('*').order('name')) as ProgramTemplate[]
+}
+
+export async function saveTemplate(t: { id?: string; name: string; description: string; notes: string; workouts: WorkoutDraft[] }) {
+  const row = { name: t.name.trim(), description: t.description.trim(), notes: t.notes.trim(), workouts: t.workouts }
+  if (t.id) unwrap(await supabase.from('program_templates').update(row).eq('id', t.id))
+  else unwrap(await supabase.from('program_templates').insert(row))
+}
+
+export async function deleteTemplate(id: string) {
+  unwrap(await supabase.from('program_templates').delete().eq('id', id))
 }
 
 export interface FullSession extends WorkoutSession {

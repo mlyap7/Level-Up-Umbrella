@@ -145,7 +145,7 @@ function ClientTraining({ client }: { client: Profile }) {
     <div className="grid-2" style={{ alignItems: 'start' }}>
       <div className="stack">
         <h2>Programs</h2>
-        <ProgramEditor clientId={client.id} programs={data.programs} onChanged={reload} />
+        <ProgramEditor clientId={client.id} clientName={client.full_name.split(" ")[0] || "this client"} programs={data.programs} onChanged={reload} />
       </div>
       <div className="stack">
         <h2>Logged workouts</h2>

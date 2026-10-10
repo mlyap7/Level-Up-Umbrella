@@ -15,7 +15,8 @@ A mobile-friendly web app where coaching clients log their progress and the coac
 **The coach can**
 - See every client on one screen, sorted by who **needs attention**: no weigh-in for 3+ days, weight not trending toward their goal for 2 weeks, a missed check-in, low ratings (e.g. stress 8+/10), or a check-in still waiting for a reply.
 - Open any client to see their progress charts, check-ins (and reply), logged workouts and journal.
-- Build training programs per client: workouts, exercises, target sets/reps/RPE and notes.
+- Build training programs per client: workouts, exercises, target sets/reps/RPE, rest, tempo, notes and a demo video link (without a link, clients get a YouTube search for the exercise).
+- Give a client a program in seconds: pick a **template** (8 starters included, edit them under Coaching → Templates), or **paste a table** from an AI chat, Google Sheets or Excel. Any program can be copied back out as a table or saved as a new template.
 - Set a **sign-up code** so only invited people can create accounts.
 - Archive clients who finish coaching. Their data is kept and they can be restored.
 - Track their **own journey** too: the **Coaching / My journey** switch in the header opens the same screens clients use.
@@ -109,6 +110,9 @@ Migrations so far, in order:
 3. `20261009000000_questionnaire_and_body_stats.sql`: coaching questionnaire, Google Form import, smart-scale stats, water
 4. `20261010000000_reminders.sql`: push-notification reminders (settings, devices, schedule rules)
 5. `20261011000000_coach_team.sql`: head coach, coaches tracking their own progress, per-coach privacy, Make coach
+6. `20261012000000_program_templates.sql`: program templates (with the starter set), one-step program creation, rest / tempo / video per exercise
+
+The starter templates are written in `scripts/program-templates.ts`; `npx vite-node scripts/build-templates-sql.ts` prints their SQL.
 
 ### Reminders (push notifications)
 - **When:** morning check-in 8am (if no weight logged), Sunday check-in 7pm, photo week Saturday 9am, optional water reminders 10am–8pm every 2 or 3 hours. All Malaysia time; rules live in `due_push_reminders()` in the migration above.

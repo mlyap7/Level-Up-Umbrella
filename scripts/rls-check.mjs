@@ -233,5 +233,25 @@ check('once promoted, other coaches no longer see her data', coachSeesAliceNow.l
 const unmake = await head.c.rpc('set_coach', { target: alice.id, make: false })
 check('head coach can undo it', !unmake.error && sql(`select role from public.profiles where id = '${alice.id}'`) === 'client')
 
+// Program templates and one-step programs
+const draft = [{ name: 'Day A', exercises: [{ name: 'Goblet squat', sets: 3, reps: '8-10', rpe: 7, rest: '90s', tempo: '3-1-1', notes: 'Chest tall', video_url: '' }] }]
+const { data: clientTpl } = await alice.c.from('program_templates').select('id')
+check('clients cannot see templates', (clientTpl ?? []).length === 0)
+const clientTplW = await alice.c.from('program_templates').insert({ name: `x-${stamp}`, workouts: [] })
+check('clients cannot create templates', !!clientTplW.error)
+const coachTpl = await coach.c.from('program_templates').insert({ name: `Test ${stamp}`, workouts: draft }).select('id').single()
+check('coaches can create templates', !coachTpl.error)
+const { data: seeded } = await coach.c.from('program_templates').select('name')
+check('starter templates are there for coaches', seeded.length >= 9)
+const selfDraft = await alice.c.rpc('create_program_from_draft', { target: alice.id, p_name: 'Mine', p_notes: '', p_workouts: draft })
+check('a client cannot create a program for themselves', !!selfDraft.error)
+const fromDraft = await coach.c.rpc('create_program_from_draft', { target: bob.id, p_name: 'From template', p_notes: 'Notes', p_workouts: draft })
+const { data: bobNew } = await bob.c.from('programs').select('name, workouts:program_workouts(name, exercises:workout_exercises(name, rest, tempo))').eq('id', fromDraft.data)
+check('a coach can give a client a whole program in one step', !fromDraft.error && bobNew?.[0]?.workouts?.[0]?.exercises?.[0]?.tempo === '3-1-1')
+const otherCoachDraft = await coach.c.rpc('create_program_from_draft', { target: coach2.id, p_name: 'Nope', p_notes: '', p_workouts: draft })
+check('a coach cannot give another coach a program', !!otherCoachDraft.error)
+const badVideo = await coach.c.from('workout_exercises').update({ video_url: 'javascript:alert(1)' }).eq('name', 'Squat').select()
+check('video links must be web links', !!badVideo.error)
+
 console.log(failures === 0 ? '\nAll security checks passed.' : `\n${failures} check(s) FAILED.`)
 process.exit(failures === 0 ? 0 : 1)

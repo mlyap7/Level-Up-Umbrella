@@ -17,6 +17,7 @@ const CLIENT_NAV: NavItem[] = [
 
 const COACH_NAV: NavItem[] = [
   { to: '/coach', label: 'Clients', icon: <IconUsers />, end: true },
+  { to: '/coach/templates', label: 'Templates', icon: <IconDumbbell /> },
   { to: '/coach/settings', label: 'Settings', icon: <IconUser /> },
 ]
 

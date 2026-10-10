@@ -290,8 +290,12 @@ table.data tr:last-child td { border-bottom: 0; }
 ::placeholder { color: var(--text-3); opacity: .55; }
 
 /* Coach program builder: exercise name and notes on their own row, numbers in a row below. */
-.add-exercise { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.add-exercise > :first-child, .add-exercise > :nth-child(5), .add-exercise > button { grid-column: 1 / -1; }
+.add-exercise { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.add-exercise > * { grid-column: span 2; }
+.add-exercise > :nth-child(5), .add-exercise > :nth-child(6) { grid-column: span 3; }
+.add-exercise > :first-child, .add-exercise > :nth-child(7), .add-exercise > button { grid-column: 1 / -1; }
+.preview-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.program-preview { border-top: 1px solid var(--border); }
 
 /* The logo is black and orange on transparent: give it a white tile so the
    black arrow and text stay visible in dark mode. */

@@ -1,19 +1,22 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import {
-  addExercise, addWorkout, createProgram, deleteExercise, deleteProgram, deleteWorkout,
+  addExercise, addWorkout, deleteExercise, deleteProgram, deleteWorkout, programToDraft, saveTemplate,
   updateExercise, updateProgram, updateWorkout, type FullProgram,
 } from '../lib/api'
+import { demoLink, programToText } from '../lib/programText'
 import type { WorkoutExercise } from '../lib/types'
 import { parseNumber } from '../lib/units'
 import { Card, ErrorMsg } from './ui'
+import { NewProgram } from './NewProgram'
 
 // Coach-only editor. Every change saves immediately, then reloads.
-export function ProgramEditor({ clientId, programs, onChanged }: { clientId: string; programs: FullProgram[]; onChanged: () => void }) {
-  const [name, setName] = useState('')
+export function ProgramEditor({ clientId, clientName, programs, onChanged }: { clientId: string; clientName: string; programs: FullProgram[]; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const run = async (fn: () => Promise<unknown>) => {
     setError(null)
+    setNotice(null)
     try {
       await fn()
       onChanged()
@@ -24,7 +27,9 @@ export function ProgramEditor({ clientId, programs, onChanged }: { clientId: str
 
   return (
     <div className="stack">
+      <NewProgram clientId={clientId} clientName={clientName} programs={programs} onCreated={onChanged} />
       <ErrorMsg error={error} />
+      {notice && <div className="alert alert-ok" role="status">{notice}</div>}
       {programs.map((p) => (
         <Card key={p.id} title={
           <div className="row">
@@ -32,7 +37,16 @@ export function ProgramEditor({ clientId, programs, onChanged }: { clientId: str
             <span className={`badge ${p.active ? 'badge-brand' : ''}`}>{p.active ? 'Active' : 'Inactive'}</span>
           </div>
         } action={
-          <div className="row">
+          <div className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost btn-sm" title="Paste into Google Sheets or an AI chat to edit"
+              onClick={() => void navigator.clipboard?.writeText(programToText(programToDraft(p))).then(() => setNotice(`Copied “${p.name}” as a table. Paste it into Google Sheets or an AI chat to edit it.`))}>Copy as table</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => {
+              const tname = prompt('Save as a template called:', p.name)?.trim()
+              if (tname) void run(async () => {
+                await saveTemplate({ name: tname, description: '', notes: p.notes, workouts: programToDraft(p) })
+                setNotice(`Saved “${tname}” as a template.`)
+              })
+            }}>Save as template</button>
             <button className="btn btn-ghost btn-sm" onClick={() => {
               const next = prompt('Program name', p.name)?.trim()
               if (next) void run(() => updateProgram(p.id, { name: next }))
@@ -66,7 +80,7 @@ export function ProgramEditor({ clientId, programs, onChanged }: { clientId: str
                   }}>Delete</button>
                 </div>
               </div>
-              <ExerciseTable exercises={w.exercises} run={run} />
+              <ExerciseTable exercises={w.exercises} run={run} setErrorText={setError} />
               <AddExerciseForm onAdd={(fields) => run(() => addExercise(w.id, { ...fields, position: w.exercises.length }))} />
             </div>
           ))}
@@ -75,16 +89,6 @@ export function ProgramEditor({ clientId, programs, onChanged }: { clientId: str
         </Card>
       ))}
 
-      <Card title="New program">
-        <form className="row" onSubmit={(e: FormEvent) => {
-          e.preventDefault()
-          if (!name.trim()) return
-          void run(async () => { await createProgram(clientId, name); setName('') })
-        }}>
-          <input className="grow" style={{ width: 'auto' }} placeholder="e.g. Block 1: Foundations" value={name} onChange={(e) => setName(e.target.value)} aria-label="Program name" />
-          <button className="btn btn-sm">Create program</button>
-        </form>
-      </Card>
     </div>
   )
 }
@@ -98,19 +102,34 @@ function NotesField({ initial, onSave }: { initial: string; onSave: (v: string) 
   )
 }
 
-function ExerciseTable({ exercises, run }: { exercises: WorkoutExercise[]; run: (fn: () => Promise<unknown>) => Promise<void> }) {
+function ExerciseTable({ exercises, run, setErrorText }: { exercises: WorkoutExercise[]; run: (fn: () => Promise<unknown>) => Promise<void>; setErrorText: (m: string) => void }) {
   if (exercises.length === 0) return <p className="small muted" style={{ margin: '8px 0' }}>No exercises yet.</p>
   return (
     <div className="table-scroll">
       <table className="data" style={{ marginTop: 8 }}>
-        <thead><tr><th>Exercise</th><th>Sets</th><th>Reps</th><th>RPE</th><th>Notes</th><th aria-label="Actions" /></tr></thead>
+        <thead><tr><th>Exercise</th><th>Sets</th><th>Reps</th><th>RPE</th><th>Rest</th><th>Tempo</th><th>Notes</th><th aria-label="Actions" /></tr></thead>
         <tbody>
           {exercises.map((e, i) => (
             <tr key={e.id}>
-              <td>{e.name}</td>
+              <td>
+                {e.name}
+                <div className="small">
+                  <a href={demoLink(e.name, e.video_url)} target="_blank" rel="noreferrer">{e.video_url ? 'Your video' : 'YouTube search'} ▶</a>
+                  {' · '}
+                  <button className="link-btn" onClick={() => {
+                    const url = prompt(`Demo video link for ${e.name} (leave empty to use a YouTube search):`, e.video_url ?? '')
+                    if (url == null) return
+                    const v = url.trim()
+                    if (v && !/^https?:\/\//i.test(v)) { setErrorText('Video links must start with https://'); return }
+                    void run(() => updateExercise(e.id, { video_url: v }))
+                  }}>{e.video_url ? 'Change' : 'Add video'}</button>
+                </div>
+              </td>
               <td>{e.target_sets ?? '–'}</td>
               <td>{e.target_reps || '–'}</td>
               <td>{e.target_rpe ?? '–'}</td>
+              <td>{e.rest || '–'}</td>
+              <td>{e.tempo || '–'}</td>
               <td className="small" style={{ maxWidth: 220 }}>{e.notes}</td>
               <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                 <button className="icon-btn" aria-label={`Move ${e.name} up`} disabled={i === 0}
@@ -128,11 +147,13 @@ function ExerciseTable({ exercises, run }: { exercises: WorkoutExercise[]; run: 
   )
 }
 
-function AddExerciseForm({ onAdd }: { onAdd: (f: { name: string; target_sets: number | null; target_reps: string; target_rpe: number | null; notes: string }) => Promise<void> }) {
+function AddExerciseForm({ onAdd }: { onAdd: (f: { name: string; target_sets: number | null; target_reps: string; target_rpe: number | null; rest: string; tempo: string; notes: string }) => Promise<void> }) {
   const [name, setName] = useState('')
   const [sets, setSets] = useState('3')
   const [reps, setReps] = useState('8-10')
   const [rpe, setRpe] = useState('')
+  const [rest, setRest] = useState('')
+  const [tempo, setTempo] = useState('')
   const [notes, setNotes] = useState('')
   return (
     <form className="add-exercise" style={{ marginTop: 8 }}
@@ -146,14 +167,18 @@ function AddExerciseForm({ onAdd }: { onAdd: (f: { name: string; target_sets: nu
           target_sets: s != null && s >= 1 && s <= 20 ? Math.round(s) : null,
           target_reps: reps.trim(),
           target_rpe: r != null && r >= 1 && r <= 10 ? r : null,
+          rest: rest.trim(),
+          tempo: tempo.trim(),
           notes: notes.trim(),
-        }).then(() => { setName(''); setNotes(''); setRpe('') })
+        }).then(() => { setName(''); setNotes(''); setRpe(''); setTempo('') })
       }}>
       <input placeholder="Exercise" value={name} onChange={(e) => setName(e.target.value)} aria-label="Exercise" maxLength={80} />
       <input placeholder="Sets" value={sets} onChange={(e) => setSets(e.target.value)} aria-label="Sets" inputMode="numeric" />
       <input placeholder="Reps" value={reps} onChange={(e) => setReps(e.target.value)} aria-label="Reps" />
       <input placeholder="RPE" value={rpe} onChange={(e) => setRpe(e.target.value)} aria-label="Target RPE" inputMode="decimal" />
-      <input placeholder="Notes (tempo, cues…)" value={notes} onChange={(e) => setNotes(e.target.value)} aria-label="Notes" />
+      <input placeholder="Rest" value={rest} onChange={(e) => setRest(e.target.value)} aria-label="Rest" maxLength={40} />
+      <input placeholder="Tempo" value={tempo} onChange={(e) => setTempo(e.target.value)} aria-label="Tempo" maxLength={20} />
+      <input placeholder="Notes (cues…)" value={notes} onChange={(e) => setNotes(e.target.value)} aria-label="Notes" />
       <button className="btn btn-secondary btn-sm" style={{ minHeight: 44 }}>Add exercise</button>
     </form>
   )
