@@ -85,7 +85,7 @@ export function CheckInCard({ checkIn, comments, viewerId, clientName, onChanged
           return (
             <div key={c.id} className={`comment ${fromClient ? '' : 'coach'}`}>
               <div className="comment-meta">
-                <strong>{fromClient ? (viewerIsClient ? 'You' : clientName) : viewerIsClient ? 'Coach' : 'You'}</strong>
+                <strong>{c.author_id === viewerId ? 'You' : fromClient ? clientName : c.author_name ? `Coach ${c.author_name}` : 'Coach'}</strong>
                 {' · '}{new Date(c.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
                 {c.author_id === viewerId && (
                   <button className="link-btn" style={{ marginLeft: 8, fontSize: '.75rem' }} onClick={async () => {

@@ -18,6 +18,13 @@ const WELCOME_NOTE = (firstName: string) => [
 ]
 const WELCOME_SIGNOFF = 'Coach Milo'
 
+// What coaches see instead when they start tracking their own journey.
+const COACH_NOTE = (firstName: string) => [
+  `Hey ${firstName || 'there'}, time to track your own journey!`,
+  'You log your weigh-ins, measurements, training and weekly check-ins here, just like your clients do. Your coaching tools stay one tap away under “Coaching”.',
+  'Let’s set you up. It takes about 2 minutes.',
+]
+
 const GOALS: { value: GoalType; label: string; hint: string }[] = [
   { value: 'lose', label: 'Lose fat', hint: 'Lean down and feel lighter' },
   { value: 'gain', label: 'Build muscle', hint: 'Get stronger and add size' },
@@ -182,8 +189,8 @@ export function Welcome() {
       body = (
         <>
           <img className="welcome-logo" src="/brand/logo.png" alt="Level Up Transformations" />
-          {WELCOME_NOTE(firstName).map((p, i) => <p key={i} className={i === 0 ? 'welcome-lead' : ''}>{p}</p>)}
-          <p className="welcome-sign">{WELCOME_SIGNOFF}</p>
+          {(profile.role === 'coach' ? COACH_NOTE : WELCOME_NOTE)(firstName).map((p, i) => <p key={i} className={i === 0 ? 'welcome-lead' : ''}>{p}</p>)}
+          {!profile.head_coach && <p className="welcome-sign">{WELCOME_SIGNOFF}</p>}
           <Next onClick={() => setStep(1)}>Let’s go</Next>
         </>
       )

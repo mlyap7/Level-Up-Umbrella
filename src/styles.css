@@ -101,6 +101,13 @@ p { margin: 0 0 .75rem; }
 }
 .top-nav a:hover { background: var(--surface-2); color: var(--text); }
 .top-nav a.active { color: var(--text); box-shadow: inset 0 -3px 0 var(--brand); border-radius: 0; }
+.mode-switch { margin-left: auto; flex-wrap: nowrap; flex-shrink: 0; }
+.mode-switch button { white-space: nowrap; }
+@media (max-width: 480px) {
+  /* Coaches: make room for the Coaching / My journey switch. */
+  .app-header-inner:has(.mode-switch) { gap: 10px; }
+  .app-header-inner:has(.mode-switch) .brand-word { display: none; }
+}
 main.page { max-width: 1120px; margin: 0 auto; padding: 20px 16px 96px; }
 
 .bottom-nav { display: none; }

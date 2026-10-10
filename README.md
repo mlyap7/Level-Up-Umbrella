@@ -18,6 +18,12 @@ A mobile-friendly web app where coaching clients log their progress and the coac
 - Build training programs per client: workouts, exercises, target sets/reps/RPE and notes.
 - Set a **sign-up code** so only invited people can create accounts.
 - Archive clients who finish coaching. Their data is kept and they can be restored.
+- Track their **own journey** too: the **Coaching / My journey** switch in the header opens the same screens clients use.
+
+**Coach team**
+- The **head coach** sees everyone, including other coaches' own progress (under **Team**), and can reply to their check-ins and write their programs.
+- Other coaches see every client plus their own data, but not other coaches' data.
+- Only the head coach can **Make coach** (or **Remove as coach**) from a person's page.
 
 Built with React + Vite (front end, hosted free on Vercel) and Supabase (logins + Postgres database, free tier). Every table is protected by row-level security: clients can only ever see their own data.
 
@@ -49,12 +55,12 @@ This makes the confirmation and password-reset emails link back to your site.
 1. Go to your site and **create an account** like a client would.
 2. In Supabase **SQL Editor**, run this (with your email):
    ```sql
-   update public.profiles set role = 'coach'
+   update public.profiles set role = 'coach', head_coach = true
    where id = (select id from auth.users where email = 'you@example.com');
    ```
 3. Sign out and back in. You now land on the coach dashboard.
 
-To add an assistant coach later, run the same command with their email. Coaches can see every client.
+To add more coaches later, open their page in the app and tap **Make coach** (head coach only). No SQL needed.
 
 ### 5. Invite clients
 In the app, go to **Settings**, set a sign-up code (e.g. `LEVELUP2026`), and send clients the sign-up link along with the code.
@@ -86,7 +92,7 @@ npx supabase db reset             # re-applies supabase/migrations
 # put the printed values in .env.local, then optionally load demo data:
 API_URL=... ANON_KEY=... DB_URL=... node scripts/seed-demo.mjs
 ```
-Demo logins: `coach@demo.test` / `sarah@demo.test`, password `password123`.
+Demo logins: `coach@demo.test` (head coach), `aisha@demo.test` (coach), `sarah@demo.test` (client), password `password123`.
 
 **Checks:**
 ```bash
@@ -102,6 +108,7 @@ Migrations so far, in order:
 2. `20261008000000_welcome_and_photos.sql`: welcome-flow profile fields and private progress-photo storage
 3. `20261009000000_questionnaire_and_body_stats.sql`: coaching questionnaire, Google Form import, smart-scale stats, water
 4. `20261010000000_reminders.sql`: push-notification reminders (settings, devices, schedule rules)
+5. `20261011000000_coach_team.sql`: head coach, coaches tracking their own progress, per-coach privacy, Make coach
 
 ### Reminders (push notifications)
 - **When:** morning check-in 8am (if no weight logged), Sunday check-in 7pm, photo week Saturday 9am, optional water reminders 10am–8pm every 2 or 3 hours. All Malaysia time; rules live in `due_push_reminders()` in the migration above.

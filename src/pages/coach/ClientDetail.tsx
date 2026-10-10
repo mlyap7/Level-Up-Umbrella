@@ -1,6 +1,6 @@
 import { NavLink, Route, Routes, useParams, Link } from 'react-router-dom'
 import {
-  getProfile, listCheckIns, listComments, listJournal, listPrograms, listSessions, setClientArchived,
+  getProfile, listCheckIns, listComments, listJournal, listPrograms, listSessions, setClientArchived, setCoach,
 } from '../../lib/api'
 import { useProfile } from '../../lib/auth'
 import { formatFullDate, toISODate } from '../../lib/dates'
@@ -26,6 +26,23 @@ export function ClientDetail() {
 
   if (loading && !client) return <Loading />
   if (error || !client) return <ErrorMsg error={error ?? 'Client not found.'} />
+  const isSelf = client.id === coach.id
+  const isCoach = client.role === 'coach'
+  const canChangeRole = Boolean(coach.head_coach) && !isSelf && !client.head_coach && !client.archived
+
+  async function changeRole() {
+    const make = !isCoach
+    const msg = make
+      ? `Make ${client!.full_name} a coach?\n\nThey’ll see every client’s data and can reply to check-ins and write programs. They won’t see other coaches’ data. They keep tracking their own progress under “My journey”, and you still see it under Team.`
+      : `Remove ${client!.full_name} as a coach?\n\nThey go back to being a client and will only see their own data. Nothing is deleted.`
+    if (!confirm(msg)) return
+    try {
+      await setCoach(client!.id, make)
+      reload()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not change their role.')
+    }
+  }
 
   const cls = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '')
   // Absolute paths: relative links inside a splat route would stack up.
@@ -33,10 +50,14 @@ export function ClientDetail() {
   return (
     <div className="stack">
       <div>
-        <Link to="/coach" className="small">← All clients</Link>
+        <Link to="/coach" className="small">← {isCoach ? 'Clients and team' : 'All clients'}</Link>
         <div className="row-between" style={{ marginTop: 4 }}>
           <div>
-            <h1 style={{ marginBottom: 2 }}>{client.full_name || 'Unnamed client'}</h1>
+            <h1 style={{ marginBottom: 2 }}>
+              {client.full_name || 'Unnamed client'}
+              {isSelf ? <span className="badge" style={{ marginLeft: 8, verticalAlign: 'middle' }}>You</span>
+                : isCoach && <span className="badge" style={{ marginLeft: 8, verticalAlign: 'middle' }}>{client.head_coach ? 'Head coach' : 'Coach'}</span>}
+            </h1>
             <div className="small muted">
               {GOALS[client.goal_type]}
               {client.height_cm != null && ` · ${round(cmTo(client.height_cm, client.length_unit))} ${client.length_unit}`}
@@ -48,12 +69,19 @@ export function ClientDetail() {
               {client.archived && ' · Archived'}
             </div>
           </div>
-          <button className="btn btn-secondary btn-sm" onClick={async () => {
-            const archive = !client.archived
-            if (archive && !confirm(`Archive ${client.full_name}? Their data is kept and you can restore them later.`)) return
-            await setClientArchived(client.id, archive)
-            reload()
-          }}>{client.archived ? 'Restore client' : 'Archive client'}</button>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {canChangeRole && (
+              <button className="btn btn-secondary btn-sm" onClick={() => void changeRole()}>{isCoach ? 'Remove as coach' : 'Make coach'}</button>
+            )}
+            {!isCoach && (
+              <button className="btn btn-secondary btn-sm" onClick={async () => {
+                const archive = !client.archived
+                if (archive && !confirm(`Archive ${client.full_name}? Their data is kept and you can restore them later.`)) return
+                await setClientArchived(client.id, archive)
+                reload()
+              }}>{client.archived ? 'Restore client' : 'Archive client'}</button>
+            )}
+          </div>
         </div>
         {client.main_goal && <p className="small" style={{ marginTop: 8, marginBottom: 0 }}><span className="muted">Main goal:</span> {client.main_goal}</p>}
         {client.goal_note && <p className="small" style={{ marginTop: 4, marginBottom: 0 }}><span className="muted">Why it matters:</span> {client.goal_note}</p>}
